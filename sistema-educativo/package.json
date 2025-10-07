@@ -1,0 +1,26 @@
+{
+  "name": "sistema-educativo",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+ "scripts": {
+  "dev": "nodemon --cwd backend server.js",
+  "start": "node backend/server.js",
+  "seed:admin": "node backend/scripts/seed-admin.js"
+}
+,
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
+
