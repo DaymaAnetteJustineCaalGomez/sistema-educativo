@@ -1,2 +1,19 @@
-/Documents/NetBeansProjects/SistemaVenta/dist/
-/nbproject/private/
+# Carpetas que no deben subirse
+ci-vitest-postgres/
+proyectoumg/
+
+# Node / JS
+node_modules/
+dist/
+build/
+coverage/
+
+# Configuración local / IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
