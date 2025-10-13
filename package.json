@@ -1,26 +1,27 @@
 {
-  "name": "sistema-educativo",
+  "name": "sistema-educativo-monorepo",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
- "scripts": {
-  "dev": "nodemon --cwd backend server.js",
-  "start": "node backend/server.js",
-  "seed:admin": "node backend/scripts/seed-admin.js",
-  "seed:demo": "node backend/scripts/seed-demo.js" 
-},
+  "type": "module",
+  "main": "backend/server.js",
+  "scripts": {
+    "dev": "nodemon backend/server.js",
+    "start": "node backend/server.js",
+    "mail:test": "node backend/scripts/test-mail.js"
+  },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.2",
-    "express": "^5.1.0",
-    "express-rate-limit": "^7.5.1",
-    "helmet": "^7.2.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.1"
+    "mongoose": "^8.5.1",
+    "morgan": "^1.10.0",
+    "nodemailer": "^6.9.13"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
   }
 }
-
