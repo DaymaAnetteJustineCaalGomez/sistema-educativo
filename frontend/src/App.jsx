@@ -1,49 +1,35 @@
-// src/App.jsx
-import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import LoginPage from './pages/LoginPage.jsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
-import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import { tokenStore } from './api.js';
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
 
-export default function App() {
+function App() {
+  const [count, setCount] = useState(0)
+
   return (
     <>
-      <nav className="nav">
-        <div className="container">
-          <Link to="/login" className="brand">Sistema Educativo</Link>
-          <div className="spacer" />
-          <AuthButtons />
-        </div>
-      </nav>
-
-      <main className="container pad">
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="*" element={<h3>404 — Página no encontrada</h3>} />
-        </Routes>
-      </main>
-
-      <Toaster position="top-right" />
+      <div>
+        <a href="https://vite.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.jsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
     </>
-  );
+  )
 }
 
-function AuthButtons() {
-  const navigate = useNavigate();
-  const isAuth = !!tokenStore.get();
-  if (!isAuth) return null;
-  return (
-    <button
-      className="btn outline"
-      onClick={() => { tokenStore.clear(); navigate('/login'); }}
-    >
-      Cerrar sesión
-    </button>
-  );
-}
+export default App

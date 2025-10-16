@@ -1,29 +1,36 @@
 // backend/server.js
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Cargar .env desde la carpeta backend (independiente del cwd)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, ".env") });
 
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import mongoose from 'mongoose';
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 
-import { connectDB } from './config/db.js';
-import healthRoutes from './routes/health.routes.js';
-import authRoutes from './routes/auth.routes.js';
+import { connectDB } from "./config/db.js";
+import healthRoutes from "./routes/health.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import usersRoutes from "./routes/users.routes.js";        // 👈 NUEVO
+import cnbRoutes from "./routes/cnb.routes.js";
+import recursosRoutes from "./routes/recursos.routes.js";
+import progresoRoutes from "./routes/progreso.routes.js";
+import recomendacionesRoutes from "./routes/recomendaciones.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+
+import intentosRoutes from "./routes/intentos.routes.js";
+import historialRoutes from "./routes/historial.routes.js";
+import notificacionesRoutes from "./routes/notificaciones.routes.js";
 
 const app = express();
 
-// -------- Seguridad / proxy --------
-app.set('trust proxy', 1); // por si usas Nginx/Render más adelante
+app.set("trust proxy", 1);
 app.use(helmet());
 
-// -------- Rate limit global --------
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -31,78 +38,49 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// -------- CORS --------
-// Soporta múltiples orígenes separados por coma en .env
-const originEnv = (process.env.CORS_ORIGIN || '').trim();
-const originList = originEnv
-  ? originEnv.split(',').map(s => s.trim()).filter(Boolean)
-  : [];
-
-const corsOptions = {
+const originEnv = (process.env.CORS_ORIGIN || "http://localhost:5173").trim();
+const originList = originEnv ? originEnv.split(",").map(s => s.trim()).filter(Boolean) : [];
+app.use(cors({
   origin: (reqOrigin, cb) => {
-    // Permite Postman/same-origin
     if (!reqOrigin) return cb(null, true);
-    // Sin lista => permitir todos (DEV)
-    if (originList.length === 0) return cb(null, true);
-    // comodín
-    if (originList.includes('*')) return cb(null, true);
-    // listado explícito
-    if (originList.includes(reqOrigin)) return cb(null, true);
-    return cb(new Error(`CORS bloqueado: ${reqOrigin} no está permitido`));
+    if (originList.includes("*") || originList.includes(reqOrigin)) return cb(null, true);
+    if (originList.length === 0 && reqOrigin.includes("localhost")) return cb(null, true);
+    return cb(new Error(`CORS bloqueado: ${reqOrigin}`));
   },
   credentials: true,
-};
-app.use(cors(corsOptions));
+}));
 
-// -------- Body parser --------
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: "2mb" }));
 
-// -------- Rutas --------
-app.use('/api/health', healthRoutes); // GET /api/health
-app.use('/api/auth', authRoutes);
+app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", usersRoutes);                        // 👈 MONTA USERS
 
-// -------- 404 --------
-app.use((req, res) => {
-  res.status(404).json({ error: `No encontrado: ${req.method} ${req.originalUrl}` });
-});
+app.use("/api/cnb", cnbRoutes);
+app.use("/api/recursos", recursosRoutes);
+app.use("/api/progreso", progresoRoutes);
+app.use("/api/recomendaciones", recomendacionesRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
-// -------- Manejador de errores --------
+app.use("/api/intentos", intentosRoutes);
+app.use("/api/historial", historialRoutes);
+app.use("/api/notificaciones", notificacionesRoutes);
+
+app.use((req, res) => res.status(404).json({ error: `No encontrado: ${req.method} ${req.originalUrl}` }));
+
 app.use((err, _req, res, _next) => {
-  console.error('💥 Error:', err?.message || err);
-  const code = err.status || 500;
-  res.status(code).json({ error: err.message || 'Error interno del servidor' });
+  console.error("💥 Error:", err?.stack || err?.message || err);
+  res.status(err.status || 500).json({ error: err.message || "Error interno del servidor" });
 });
 
-// -------- Puerto / arranque --------
 const PORT = process.env.PORT || 5002;
-
-(function sanityLogs() {
-  console.log('MONGO_URI presente?', !!process.env.MONGO_URI);
-  if (!process.env.JWT_SECRET) console.warn('⚠️ Falta JWT_SECRET en .env');
-  if (!process.env.APP_BASE_URL) console.warn('⚠️ Falta APP_BASE_URL en .env (reset-password link)');
-  console.log('CORS_ORIGIN =', originEnv || '(sin definir → todos permitidos en dev)');
-})();
-
-// -------- Start (esperando DB) --------
 (async () => {
   try {
     await connectDB();
-
-    const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-    console.log('🔌 mongoose.readyState =', mongoose.connection.readyState, states[mongoose.connection.readyState]);
-
-    app.listen(PORT, () => {
-      console.log(`✅ Servidor en http://localhost:${PORT}`);
-    });
+    console.log(`✅ API en http://localhost:${PORT}`);
+    app.listen(PORT);
   } catch (err) {
-    console.error('❌ No se pudo iniciar:', err.message);
+    console.error("❌ No se pudo iniciar:", err.message);
     process.exit(1);
   }
 })();
-
-// -------- Cierre limpio --------
-process.on('SIGINT', async () => {
-  console.log('\n⏳ Cerrando servidor...');
-  await mongoose.connection.close();
-  process.exit(0);
-});
