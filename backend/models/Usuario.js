@@ -33,8 +33,18 @@ const usuarioSchema = new mongoose.Schema(
 
     rol: { type: String, enum: ROLES, default: 'ESTUDIANTE' },
 
-    // 👇 NUEVO: grado del ciclo básico (1,2,3)
-    grado: { type: Number, enum: [1, 2, 3], default: null },
+    // Grado (opcional). Ya no se pide al registrar.
+    grado: {
+      type: Number,
+      enum: [1, 2, 3],
+      default: null,
+      set: (v) => {
+        if (v === null || v === undefined || v === '') return null;
+        const m = String(v).match(/\d/);
+        const n = m ? parseInt(m[0], 10) : NaN;
+        return [1, 2, 3].includes(n) ? n : null;
+      },
+    },
 
     // Seguridad extra / recuperación
     passwordChangedAt: { type: Date, select: false },
@@ -68,8 +78,16 @@ const usuarioSchema = new mongoose.Schema(
   }
 );
 
+// --------- Índices útiles ---------
+// Evitamos duplicar índice (ya está unique+index en el campo email)
 usuarioSchema.index({ passwordResetToken: 1 }, { sparse: true });
 
+// --------- Virtual: alias "role" <-> "rol" ---------
+usuarioSchema.virtual('role')
+  .get(function () { return this.rol; })
+  .set(function (val) { this.rol = val; });
+
+// --------- Hooks ---------
 usuarioSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 10);
@@ -78,6 +96,7 @@ usuarioSchema.pre('save', async function (next) {
   next();
 });
 
+// --------- Métodos ---------
 usuarioSchema.methods.comparePassword = async function (plain) {
   const hash = this.password || this.passwordHash;
   if (!hash) return false;
@@ -102,4 +121,6 @@ usuarioSchema.methods.clearPasswordReset = function () {
   this.passwordResetExpires = null;
 };
 
+// --------- Export ---------
 export const Usuario = mongoose.model('Usuario', usuarioSchema);
+export default Usuario;
