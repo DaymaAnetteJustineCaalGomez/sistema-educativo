@@ -1,0 +1,146 @@
+:root{
+  --line:#e5e7eb;
+  --btn-grad: linear-gradient(135deg, #6d28d9 0%, #ec4899 50%, #fb923c 100%);
+}
+*{ box-sizing:border-box }
+html,body{ height:100% }
+body{
+  margin:0; font-family:'Inter',system-ui,Segoe UI,Roboto,Arial; color:#e5e7eb;
+  background:
+    radial-gradient(44vw 36vh at 82% 12%, rgba(124,58,237,.28), transparent 65%),
+    radial-gradient(40vw 35vh at 10% 16%, rgba(236,72,153,.28), transparent 68%),
+    radial-gradient(38vw 40vh at 86% 82%, rgba(251,146,60,.28), transparent 70%),
+    radial-gradient(1200px 700px at 50% -10%, rgba(255,255,255,.06), transparent 70%),
+    linear-gradient(180deg, #151a2b 0%, #1a2136 60%, #151a2b 100%);
+  padding: clamp(12px, 3vw, 24px);
+  min-height:100dvh; display:grid; place-items:center;
+}
+
+/* Layout CENTRADO siempre */
+.container{ width:100%; max-width:1200px; display:grid; place-items:center }
+.grid{
+  display:grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: clamp(14px, 3vw, 28px);
+  align-items:center;
+  justify-items:center;      /* centra cada celda */
+  width:100%;
+}
+@media (max-width: 1024px){
+  .grid{ grid-template-columns:1fr }
+  .brandcol{ order:-1 }
+}
+.formcol{ width:100%; display:flex; justify-content:center }
+.formwrap{ width:100%; max-width:540px; margin:0 auto }
+
+/* Tabs */
+.switcher{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; justify-content:center }
+.switcher .sw{
+  padding:10px 12px; border-radius:999px; border:1px solid rgba(226,232,240,.8);
+  background:rgba(241,245,249,.12); color:#fff; font-weight:800; font-size:13px; cursor:pointer; user-select:none;
+}
+.switcher .sw.active{ background:var(--btn-grad); color:#0b0d12; border-color:transparent }
+
+/* Títulos más compactos */
+.heads{ text-align:center }
+.heads h2{
+  margin:4px 0;
+  font-family:'Poppins',sans-serif;
+  font-size: clamp(19px, 2vw, 25px); /* ← más pequeño y elegante */
+  font-weight:900;
+  letter-spacing:.2px;
+  line-height:1.15;
+}
+.sub{ color:#e2e8f0; font-weight:600; font-size:12px; margin:0 0 14px }
+
+/* Form */
+form{ display:grid; gap:8px; text-align:left }
+label.field{ font-weight:800; font-size:12px; color:#ffffff }
+.input{
+  width:100%; padding:10px 12px; border-radius:12px; border:2px solid var(--line);
+  background:#f8fafc; outline:none; font-size:14px; min-height:40px
+}
+.input::placeholder{ color:#94a3b8 }
+.row{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
+@media (max-width: 560px){ .row{ grid-template-columns:1fr } }
+.actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap }
+.link{ color:#e5e7eb; text-decoration:none; font-weight:800; font-size:12px }
+.btn, .btn-secondary{
+  border:0; padding:10px 16px; border-radius:999px; font-weight:800; cursor:pointer; font-size:14px;
+  display:inline-flex; align-items:center; gap:8px
+}
+.btn{ color:#0b0d12; background: var(--btn-grad) }    /* degradado */
+.btn-secondary{ color:#0b0d12; background:#f1f5f9 }  /* para “Cerrar sesión” */
+.btn[disabled]{ opacity:.7; cursor:not-allowed }
+
+/* Ojito */
+.input-wrap{ position:relative }
+.eye-btn{
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  display:inline-flex; align-items:center; justify-content:center;
+  width:40px; height:40px; border-radius:10px; border:1px solid rgba(0,0,0,.18); background:#ffffff;
+  cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.08)
+}
+.eye-btn svg{ width:18px; height:18px }
+
+/* Marca / Búho */
+.brandcol{ display:grid; place-items:center; text-align:center; width:100% }
+.brand img{
+  width: clamp(220px, 38vw, 370px);   /* ← antes 210–360, ahora un poquito más grande */
+  height:auto;
+  filter:drop-shadow(0 22px 34px rgba(2,6,23,.25));
+}
+.brand h1{
+  margin:18px 0 0;
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight:900;
+  color:#ffffff;
+  font-family:'Poppins', sans-serif;
+}
+.brand p{
+  margin:6px auto 0;
+  max-width:40ch;
+  color:#e2e8f0;
+  font-weight:700;
+  font-size:14px;
+}
+
+
+/* Toast */
+.toast{ position:fixed; left:12px; right:12px; bottom:12px; z-index:50; display:none }
+.toast.show{ display:block }
+.toast .box{ background:rgba(2,6,23,.92); border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:12px; text-align:center }
+
+/* Panel */
+.app{ display:none; max-width:1100px; margin:auto; width:100% }
+.app .top{
+  display:flex; justify-content:space-between; align-items:center;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+  border-radius:16px; padding:10px 14px; margin-bottom:14px
+}
+.badge{ padding:6px 10px; border:1px solid rgba(255,255,255,.2); border-radius:999px; margin-left:8px }
+
+/* ========== Formulario un poco más pequeño (override) ========== */
+.formwrap{ max-width: 515px; }              /* antes 540px */
+
+.input{
+  padding: 8px 10px;                        /* antes 10px 12px */
+  font-size: 13px;                          /* antes 14px */
+  min-height: 36px;                         /* antes 40px */
+}
+
+.row{ gap: 8px; }                           /* antes 10px */
+.actions{ gap: 8px; margin-top: 8px; }      /* menos aire */
+
+.btn, .btn-secondary{
+  padding: 8px 14px;                        /* antes 10px 16px */
+  font-size: 13.5px;                        /* sutil ajuste */
+}
+
+.eye-btn{
+  width: 36px; height: 36px;                /* antes 40x40 */
+}
+.eye-btn svg{ width: 16px; height: 16px; }
+
+label.field{ font-size: 11.5px; }           /* antes 12px */
+.sub{ font-size: 12.5px; }                  /* subtítulo más discreto */
