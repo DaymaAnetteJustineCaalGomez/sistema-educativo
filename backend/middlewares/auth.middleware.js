@@ -56,10 +56,11 @@ export const authRequired = async (req, res, next) => {
       return send401(res, 'Token inválido');
     }
 
-    if (!payload?.id) return send401(res, 'Token inválido');
+    const payloadId = payload?.id || payload?.uid || payload?.userId;
+    if (!payloadId) return send401(res, 'Token inválido');
 
     // Carga mínima del usuario; necesitamos rol y passwordChangedAt para invalidación
-    const user = await Usuario.findById(payload.id)
+    const user = await Usuario.findById(payloadId)
       .select('+passwordChangedAt rol nombre email');
 
     if (!user) return send401(res, 'Token inválido');
@@ -78,6 +79,7 @@ export const authRequired = async (req, res, next) => {
       rol: user.rol,
       nombre: user.nombre,
       email: user.email,
+      grado: user.grado ?? null,
     };
     req.auth = payload; // por si necesitas iat/exp en otra capa
     return next();

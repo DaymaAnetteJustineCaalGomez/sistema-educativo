@@ -16,6 +16,17 @@ body{
   min-height:100dvh; display:grid; place-items:center;
 }
 
+body.dashboard-mode{
+  display:block;
+  padding:clamp(20px, 5vw, 48px);
+}
+
+body.dashboard-mode .container{
+  display:block;
+  max-width:1200px;
+  margin:0 auto;
+}
+
 /* Layout CENTRADO siempre */
 .container{ width:100%; max-width:1200px; display:grid; place-items:center }
 .grid{
@@ -71,7 +82,7 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 }
 .btn{ color:#0b0d12; background: var(--btn-grad) }    /* degradado */
 .btn-secondary{ color:#0b0d12; background:#f1f5f9 }  /* para “Cerrar sesión” */
-.btn[disabled]{ opacity:.7; cursor:not-allowed }
+.btn[disabled], .btn-secondary[disabled]{ opacity:.7; cursor:not-allowed }
 
 /* Ojito */
 .input-wrap{ position:relative }
@@ -112,13 +123,259 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .toast .box{ background:rgba(2,6,23,.92); border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:12px; text-align:center }
 
 /* Panel */
-.app{ display:none; max-width:1100px; margin:auto; width:100% }
-.app .top{
-  display:flex; justify-content:space-between; align-items:center;
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
-  border-radius:16px; padding:10px 14px; margin-bottom:14px
+.app{ width:100%; }
+.badge{ padding:6px 10px; border:1px solid rgba(255,255,255,.2); border-radius:999px; margin-left:0; font-size:12px; font-weight:700; color:#e2e8f0 }
+
+.dashboard{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+  background:rgba(15,23,42,.68);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:24px;
+  padding:clamp(18px, 4vw, 36px);
+  width:100%;
+  box-shadow:0 30px 60px rgba(8,12,26,.35);
+  backdrop-filter:blur(28px);
 }
-.badge{ padding:6px 10px; border:1px solid rgba(255,255,255,.2); border-radius:999px; margin-left:8px }
+
+.dashboard__top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+  flex-wrap:wrap;
+}
+
+.dashboard__brand{
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:#cbd5f5;
+}
+
+.dashboard__grade{
+  margin-left:10px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid rgba(129,140,248,.35);
+  background:rgba(129,140,248,.14);
+  color:#e0e7ff;
+  font-weight:700;
+  font-size:12px;
+}
+
+.dashboard__user{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.dashboard__user-info{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:15px;
+}
+
+.dashboard__hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:24px;
+  flex-wrap:wrap;
+  background:linear-gradient(135deg, rgba(79,70,229,.35), rgba(236,72,153,.25));
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;
+  padding:clamp(18px, 4vw, 32px);
+}
+
+.dashboard__eyebrow{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:#cbd5f5;
+  margin:0 0 8px;
+}
+
+.dashboard__hero h1{
+  margin:0 0 6px;
+  font-size:clamp(26px, 4vw, 34px);
+  font-family:'Poppins', sans-serif;
+  font-weight:800;
+}
+
+.dashboard__hero p{
+  margin:0;
+  max-width:45ch;
+  color:#e2e8f0;
+  font-weight:600;
+}
+
+.dashboard__recommendation .dashboard__card{
+  background:linear-gradient(135deg, rgba(236,72,153,.35), rgba(244,114,182,.28));
+  border-radius:20px;
+  padding:clamp(18px, 4vw, 30px);
+  border:1px solid rgba(255,255,255,.16);
+  color:#0f172a;
+  display:grid;
+  gap:10px;
+}
+
+.dashboard__card h2{
+  margin:0;
+  font-size:clamp(22px, 3vw, 28px);
+  font-weight:800;
+}
+
+.dashboard__card p{
+  margin:0;
+  color:#0f172a;
+  font-weight:600;
+}
+
+.dashboard__pill{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.86);
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:#be185d;
+}
+
+.dashboard__courses{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.dashboard__section-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.dashboard__section-header h2{
+  margin:0;
+  font-size:clamp(20px, 3vw, 26px);
+  font-weight:800;
+  font-family:'Poppins', sans-serif;
+}
+
+.dashboard__section-subtitle{
+  margin:4px 0 0;
+  color:#cbd5f5;
+  font-size:13px;
+  font-weight:600;
+}
+
+.dashboard__see-all{
+  padding:8px 16px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);
+  color:#f8fafc;
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.dashboard__see-all:hover{
+  background:rgba(255,255,255,.16);
+}
+
+.dashboard__see-all[disabled]{
+  opacity:.7;
+  cursor:not-allowed;
+}
+
+.dashboard__status{
+  padding:18px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(15,23,42,.6);
+  text-align:center;
+  font-weight:600;
+  color:#e2e8f0;
+}
+
+.dashboard__status--error{
+  border-color:rgba(248,113,113,.55);
+  color:#fecaca;
+}
+
+.course-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+  gap:18px;
+}
+
+.course-card{
+  background:rgba(15,23,42,.82);
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  box-shadow:0 18px 34px rgba(15,23,42,.35);
+}
+
+.course-card__meta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12.5px;
+  font-weight:700;
+  color:#cbd5f5;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.course-card h3{
+  margin:0;
+  font-size:clamp(16px, 2.4vw, 20px);
+  font-weight:800;
+}
+
+.course-card__progress{
+  margin:0;
+  color:#e2e8f0;
+  font-weight:600;
+  font-size:13px;
+}
+
+.course-card__link{
+  border:0;
+  background:transparent;
+  color:#f472b6;
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+  align-self:flex-start;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.course-card__link::after{
+  content:'→';
+  font-size:14px;
+}
+
+.course-card__link:hover{
+  color:#fb7185;
+}
+
+.course-card__dot{ opacity:.6; }
 
 /* ========== Formulario un poco más pequeño (override) ========== */
 .formwrap{ max-width: 515px; }              /* antes 540px */

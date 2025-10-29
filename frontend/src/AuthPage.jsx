@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { api } from './api'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { api, getToken, setToken, clearToken } from './api'
 
 // Iconos del ojito (ojo / ojo con slash)
 const ICONS = {
@@ -13,6 +13,45 @@ const ICONS = {
       <path d="M3 3l18 18"/><path d="M10.58 10.58a3 3 0 104.24 4.24"/><path d="M9.88 4.37A9.76 9.76 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-4.9 5.94"/><path d="M6.1 6.1A18.5 18.5 0 001 12s4 8 11 8a10.6 10.6 0 003.54-.61"/>
     </svg>
   )
+}
+
+const GRADE_LABELS = {
+  1: '1° Básico',
+  2: '2° Básico',
+  3: '3° Básico'
+}
+
+const parseGrado = (value) => {
+  if (value === null || value === undefined) return null
+  const num = Number(value)
+  if ([1, 2, 3].includes(num)) return num
+  const match = String(value).match(/([123])/)
+  return match ? Number(match[1]) : null
+}
+
+const normalizeUser = (raw) => {
+  if (!raw) return null
+  const grado = parseGrado(raw.grado ?? raw.grade)
+  const name = (raw.nombre || raw.name || '').trim()
+  const role = String(raw.rol || raw.role || 'ESTUDIANTE').toUpperCase()
+  return {
+    id: raw.id || raw._id || raw.uid || null,
+    name,
+    nombre: name,
+    email: raw.email || '',
+    role,
+    rol: role,
+    grado
+  }
+}
+
+const getGradeLabel = (grado) => GRADE_LABELS[grado] || 'CNB Básico'
+
+const getFirstName = (user) => {
+  const base = (user?.name || user?.nombre || user?.email || '').trim()
+  if (!base) return 'Estudiante'
+  const parts = base.split(/\s+/)
+  return parts[0] || base
 }
 
 function Eye({ targetId }) {
@@ -35,6 +74,93 @@ const Toast = ({ show, msg }) => (
   </div>
 )
 
+function Dashboard({ user, courses, loading, error, onRefresh, onLogout }) {
+  const grado = parseGrado(user?.grado) || 1
+  const gradeLabel = getGradeLabel(grado)
+  const firstName = getFirstName(user)
+  const courseList = Array.isArray(courses) ? courses : []
+  const hasCourses = courseList.length > 0
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard__top">
+        <div>
+          <span className="dashboard__brand">Sistema Educativo</span>
+          <span className="dashboard__grade">{gradeLabel}</span>
+        </div>
+        <div className="dashboard__user">
+          <div className="dashboard__user-info">
+            <strong>{user?.name || user?.email}</strong>
+            <span className="badge">{user?.role}</span>
+          </div>
+          <button className="btn-secondary" onClick={onLogout} type="button">Cerrar sesión</button>
+        </div>
+      </div>
+
+      <section className="dashboard__hero">
+        <div>
+          <p className="dashboard__eyebrow">Mis cursos CNB · {gradeLabel}</p>
+          <h1>¡Hola, {firstName}!</h1>
+          <p>Explora las áreas del Currículo Nacional Base y sigue tu progreso.</p>
+        </div>
+        <button className="btn-secondary" type="button" onClick={() => onRefresh(grado)} disabled={loading}>
+          {loading ? 'Actualizando...' : 'Actualizar'}
+        </button>
+      </section>
+
+      <section className="dashboard__recommendation">
+        <div className="dashboard__card">
+          <span className="dashboard__pill">Recomendado para ti</span>
+          <h2>{gradeLabel}</h2>
+          <p>Aún no hay recomendaciones. Completa algunos subtemas para generarlas.</p>
+        </div>
+      </section>
+
+      <section className="dashboard__courses">
+        <div className="dashboard__section-header">
+          <div>
+            <h2>Cursos del CNB</h2>
+            <p className="dashboard__section-subtitle">{hasCourses ? `${courseList.length} áreas disponibles` : 'Sin cursos disponibles'}</p>
+          </div>
+          <button className="dashboard__see-all" type="button" onClick={() => onRefresh(grado)} disabled={loading}>
+            Ver todo
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="dashboard__status">Cargando cursos...</div>
+        ) : error ? (
+          <div className="dashboard__status dashboard__status--error">{error}</div>
+        ) : hasCourses ? (
+          <div className="course-grid">
+            {courseList.map((course) => {
+              const competencias = course?.competenciasCount ?? 0
+              const recursos = course?.recursosCount ?? 0
+              const progreso = Math.round(course?.progreso ?? 0)
+              const title = course?.titulo || course?.area || 'Área sin nombre'
+
+              return (
+                <article className="course-card" key={course?._id || title}>
+                  <div className="course-card__meta">
+                    <span>{competencias} competencias</span>
+                    <span className="course-card__dot">•</span>
+                    <span>{recursos} recursos</span>
+                  </div>
+                  <h3>{title}</h3>
+                  <p className="course-card__progress">Progreso general: {progreso}%</p>
+                  <button className="course-card__link" type="button">Ver contenidos</button>
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="dashboard__status">No encontramos cursos para este grado.</div>
+        )}
+      </section>
+    </div>
+  )
+}
+
 export default function AuthPage(){
   // Arranca en INICIAR SESIÓN
   const [tab, setTab] = useState('login')
@@ -42,6 +168,11 @@ export default function AuthPage(){
   const [login, setLogin]   = useState({ email:'', password:'' })
   const [signup, setSignup] = useState({ name:'', role:'', email:'', p1:'', p2:'', code:'' })
   const [user, setUser] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [coursesLoading, setCoursesLoading] = useState(false)
+  const [coursesError, setCoursesError] = useState('')
+
+  const userGrade = parseGrado(user?.grado) || 1
 
   const [cooldown, setCooldown] = useState(0)
   const [loadingL, setLoadingL] = useState(false)
@@ -60,6 +191,52 @@ export default function AuthPage(){
     timerRef.current = setTimeout(()=> setToast({ show:false, msg:'' }), ms)
   }
 
+  const applyUserFromAuth = async (res, fallbackUser) => {
+    if (res?.token) setToken(res.token)
+
+    const direct = normalizeUser(res?.user || res)
+    if (direct) {
+      setUser(direct)
+      return direct
+    }
+
+    try {
+      const me = await api.me()
+      const normalized = normalizeUser(me?.user || me)
+      if (normalized) {
+        setUser(normalized)
+        return normalized
+      }
+    } catch {
+      clearToken()
+    }
+
+    if (fallbackUser) {
+      const normalizedFallback = normalizeUser(fallbackUser)
+      if (normalizedFallback) {
+        setUser(normalizedFallback)
+        return normalizedFallback
+      }
+    }
+
+    return null
+  }
+
+  const loadCourses = useCallback(async (gradoValue) => {
+    const target = parseGrado(gradoValue) || userGrade || 1
+    setCoursesLoading(true)
+    setCoursesError('')
+    try {
+      const data = await api.cursosBasico(target)
+      setCourses(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setCourses([])
+      setCoursesError(err.message || 'No se pudieron cargar los cursos.')
+    } finally {
+      setCoursesLoading(false)
+    }
+  }, [userGrade])
+
   // cooldown reenvío
   useEffect(()=>{
     if (cooldown<=0) return
@@ -67,17 +244,42 @@ export default function AuthPage(){
     return ()=> clearInterval(t)
   },[cooldown])
 
-  // AUTO /me — solo marcamos sesión si /me trae user o datos claros
   useEffect(() => {
+    const token = getToken()
+    if (!token) {
+      setUser(null)
+      return
+    }
+
     (async () => {
       try {
-        const me = await api.me() // ideal: { user: {name,email,role} }
-        if (me && me.user)       setUser(me.user)
-        else if (me && (me.email || me.role)) setUser({ name: me.name, email: me.email, role: me.role })
-        else                     setUser(null)
-      } catch { setUser(null) }   // 401/404 => no logueado
-    })();
+        const me = await api.me()
+        const normalized = normalizeUser(me?.user || me)
+        if (normalized) setUser(normalized)
+        else {
+          clearToken()
+          setUser(null)
+        }
+      } catch {
+        clearToken()
+        setUser(null)
+      }
+    })()
   }, [])
+
+  useEffect(() => {
+    document.body.classList.toggle('dashboard-mode', !!user)
+    return () => document.body.classList.remove('dashboard-mode')
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setCourses([])
+      setCoursesError('')
+      return
+    }
+    loadCourses(userGrade)
+  }, [user, userGrade, loadCourses])
 
   const sendCode = async () => {
     const { email, role } = signup
@@ -103,13 +305,8 @@ export default function AuthPage(){
     try {
       setLoadingS(true)
       const res = await api.register(payload)
-      if (res?.user) setUser(res.user)
-      else {
-        const me = await api.me().catch(()=>null)
-        if (me?.user) setUser(me.user)
-        else if (me?.email || me?.role) setUser({ name: me.name, email: me.email, role: me.role })
-        else setUser({ name: payload.name, email: payload.email, role: payload.role }) // fallback
-      }
+      const fallbackUser = { name: payload.name, email: payload.email, role: payload.role }
+      await applyUserFromAuth(res, fallbackUser)
       resetSignup()
     } catch (e) {
       showToast(e.message || 'No se pudo registrar')
@@ -123,14 +320,10 @@ export default function AuthPage(){
     if (!login.email.trim()) return showToast('Escribe tu correo electronico.')
     try {
       setLoadingL(true)
-      const res = await api.login(login.email.trim(), login.password)
-      if (res?.user) setUser(res.user)
-      else {
-        const me = await api.me().catch(()=>null)
-        if (me?.user) setUser(me.user)
-        else if (me?.email || me?.role) setUser({ name: me.name, email: me.email, role: me.role })
-        else setUser({ email: login.email.trim(), role:'ESTUDIANTE' }) // fallback
-      }
+      const email = login.email.trim()
+      const res = await api.login(email, login.password)
+      const fallbackUser = { email, role: 'ESTUDIANTE' }
+      await applyUserFromAuth(res, fallbackUser)
       resetLogin()
     } catch (e) {
       showToast(e.message || 'No se pudo iniciar sesión')
@@ -140,7 +333,11 @@ export default function AuthPage(){
   }
 
   const onLogout = async () => {
+    clearToken()
     setUser(null)
+    setCourses([])
+    setCoursesError('')
+    setCoursesLoading(false)
     goTab('login')
     resetLogin()
     resetSignup()
@@ -263,16 +460,15 @@ export default function AuthPage(){
           </aside>
         </div>
       ) : (
-        <div className="app" id="app" style={{ display:'block' }}>
-          <div className="top">
-            <div>
-              <strong id="app-name">{user.name || user.email}</strong>
-              <span className="badge" id="app-role">{user.role}</span>
-            </div>
-            <button className="btn-secondary" onClick={onLogout} type="button">Cerrar sesión</button>
-          </div>
-          <h2 style={{ margin:'6px 0 12px', fontFamily:'Poppins, sans-serif' }}>Panel</h2>
-          <p>Bienvenido, {user.name || user.email}. Aquí irán tus módulos según el rol <b>{user.role}</b>.</p>
+        <div className="app" id="app">
+          <Dashboard
+            user={user}
+            courses={courses}
+            loading={coursesLoading}
+            error={coursesError}
+            onRefresh={loadCourses}
+            onLogout={onLogout}
+          />
         </div>
       )}
 

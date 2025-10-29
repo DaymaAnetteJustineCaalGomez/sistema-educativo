@@ -9,7 +9,9 @@ import { registerCodeTemplate, resetPasswordTemplate } from "../utils/emailTempl
 const normEmail = (e = "") => String(e).trim().toLowerCase();
 const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 const signToken = (user) => {
-  const payload = { uid: user._id, role: user.role, email: user.email };
+  const id = user?._id?.toString?.() || user?.id || user?.uid;
+  const role = user?.rol || user?.role;
+  const payload = { id, uid: id, role, email: user.email };
   const secret = process.env.JWT_SECRET || "change_me";
   const expiresIn = process.env.JWT_EXPIRES || "1d";
   return jwt.sign(payload, secret, { expiresIn });
