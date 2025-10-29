@@ -8,11 +8,61 @@ import { registerCodeTemplate, resetPasswordTemplate } from "../utils/emailTempl
 // Helpers
 const normEmail = (e = "") => String(e).trim().toLowerCase();
 const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+const getJwtSecret = () => {
+  const raw = process.env.JWT_SECRET;
+  const secret = typeof raw === "string" && raw.trim().length ? raw.trim() : "change_me";
+  return secret;
+};
+
+const getJwtExpires = () => {
+  const raw = process.env.JWT_EXPIRES;
+  const expires = typeof raw === "string" && raw.trim().length ? raw.trim() : "1d";
+  return expires;
+};
+
 const signToken = (user) => {
-  const payload = { uid: user._id, role: user.role, email: user.email };
-  const secret = process.env.JWT_SECRET || "change_me";
-  const expiresIn = process.env.JWT_EXPIRES || "1d";
+  const plain = typeof user?.toObject === "function" ? user.toObject() : user;
+  const payload = {
+    id: plain?._id?.toString?.() || plain?.id || plain?.uid,
+    uid: plain?._id?.toString?.() || plain?.id || plain?.uid,
+    role: plain?.rol || plain?.role,
+    email: plain?.email,
+  };
+  const secret = getJwtSecret();
+  const expiresIn = getJwtExpires();
   return jwt.sign(payload, secret, { expiresIn });
+};
+
+const normalizeGrade = (input) => {
+  if (input === null || input === undefined || input === "") return null;
+  if (typeof input === "number") {
+    return [1, 2, 3].includes(input) ? input : null;
+  }
+  const match = String(input).match(/\d/);
+  if (!match) return null;
+  const num = parseInt(match[0], 10);
+  return [1, 2, 3].includes(num) ? num : null;
+};
+
+const formatUser = (user) => {
+  if (!user) return null;
+  const plain = typeof user.toObject === "function" ? user.toObject() : user;
+  const id = plain?._id?.toString?.() || plain?.id || plain?.uid || null;
+  const role = String(plain?.rol || plain?.role || "ESTUDIANTE").toUpperCase();
+  const grade = normalizeGrade(plain?.grado ?? plain?.grade);
+  const base = {
+    id,
+    nombre: plain?.nombre,
+    name: plain?.nombre,
+    email: plain?.email,
+    rol: role,
+    role,
+    grado: grade,
+    grade,
+    createdAt: plain?.createdAt,
+    updatedAt: plain?.updatedAt,
+  };
+  return base;
 };
 
 // ---------- LOGIN ----------
@@ -31,11 +81,9 @@ export const login = async (req, res, next) => {
     const ok = await user.comparePassword(password);
     if (!ok) return res.status(401).json({ message: "Credenciales inválidas" });
 
-    const token = signToken(user);
-    const out = user.toObject();
-    delete out.password;
-    delete out.passwordHash;
-    return res.json({ token, user: out });
+    const fresh = await Usuario.findById(user._id).lean();
+    const token = signToken(fresh || user);
+    return res.json({ token, user: formatUser(fresh || user) });
   } catch (err) { return next(err); }
 };
 
@@ -99,16 +147,21 @@ export const registerWithOtp = async (req, res, next) => {
     const exists = await Usuario.findOne({ email });
     if (exists) return res.status(409).json({ message: "Este correo ya está registrado" });
 
-    // ESTUDIANTE: no requiere OTP (y ya NO guardamos 'grado' aquí)
+    // ESTUDIANTE: no requiere OTP y ahora el grado puede elegirse luego
     if (role === "ESTUDIANTE") {
-      const user = await Usuario.create({
+      const grade = normalizeGrade(req.body.grado ?? req.body.grade);
+      const payload = {
         nombre,
         email,
         password,          // se hashea en pre('save')
         rol: "ESTUDIANTE",
-      });
-      const token = signToken(user);
-      return res.status(201).json({ token, user });
+      };
+      if (grade) payload.grado = grade;
+
+      const user = await Usuario.create(payload);
+      const fresh = await Usuario.findById(user._id).lean();
+      const token = signToken(fresh || user);
+      return res.status(201).json({ token, user: formatUser(fresh || user) });
     }
 
     // DOCENTE / ADMIN: requiere OTP
@@ -138,8 +191,9 @@ export const registerWithOtp = async (req, res, next) => {
       rol: role,
     });
 
-    const token = signToken(user);
-    return res.status(201).json({ token, user });
+    const fresh = await Usuario.findById(user._id).lean();
+    const token = signToken(fresh || user);
+    return res.status(201).json({ token, user: formatUser(fresh || user) });
   } catch (err) { return next(err); }
 };
 
