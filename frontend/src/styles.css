@@ -64,7 +64,19 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .row{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
 @media (max-width: 560px){ .row{ grid-template-columns:1fr } }
 .actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap }
-.link{ color:#e5e7eb; text-decoration:none; font-weight:800; font-size:12px }
+.link{
+  color:#e5e7eb;
+  text-decoration:none;
+  font-weight:800;
+  font-size:12px;
+  background:none;
+  border:0;
+  cursor:pointer;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+}
+.link:focus{ outline:none }
 .btn, .btn-secondary{
   border:0; padding:10px 16px; border-radius:999px; font-weight:800; cursor:pointer; font-size:14px;
   display:inline-flex; align-items:center; gap:8px

@@ -35,10 +35,55 @@ const Toast = ({ show, msg }) => (
   </div>
 )
 
+const GRADE_LABELS = {
+  1: '1ro. Básico',
+  2: '2do. Básico',
+  3: '3ro. Básico'
+}
+
+const parseGradeNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'number') return [1, 2, 3].includes(value) ? value : null
+  const match = String(value).match(/\d/)
+  if (!match) return null
+  const num = parseInt(match[0], 10)
+  return [1, 2, 3].includes(num) ? num : null
+}
+
+const gradeLabelFromValue = (value) => {
+  const num = parseGradeNumber(value)
+  if (num) return GRADE_LABELS[num]
+  if (typeof value === 'string' && value.trim()) return value
+  return ''
+}
+
+const normalizeUser = (raw) => {
+  if (!raw) return null
+  const id = raw.id || raw._id || raw.uid || null
+  const name = raw.nombre || raw.name || ''
+  const email = raw.email || ''
+  const role = String(raw.rol || raw.role || 'ESTUDIANTE').toUpperCase()
+  const gradeNumber = parseGradeNumber(raw.grado ?? raw.grade ?? raw.gradeNumber)
+  const grade = gradeLabelFromValue(raw.gradeLabel ?? raw.grade ?? raw.grado)
+  return {
+    id,
+    name,
+    nombre: name,
+    email,
+    role,
+    rol: role,
+    grade,
+    gradeNumber,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+  }
+}
+
 export default function AuthPage(){
   // Arranca en INICIAR SESIÓN
   const [tab, setTab] = useState('login')
 
+  const tokenStore = api.storeToken
   const [login, setLogin]   = useState({ email:'', password:'' })
   const [signup, setSignup] = useState({ name:'', role:'', grade:'', email:'', p1:'', p2:'', code:'' })
   const [user, setUser] = useState(null)
@@ -46,13 +91,41 @@ export default function AuthPage(){
   const [cooldown, setCooldown] = useState(0)
   const [loadingL, setLoadingL] = useState(false)
   const [loadingS, setLoadingS] = useState(false)
+  const [forgotMode, setForgotMode] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [resetToken, setResetToken] = useState('')
+  const [resetForm, setResetForm] = useState({ password:'', confirm:'' })
+  const [resetLoading, setResetLoading] = useState(false)
   const [toast, setToast] = useState({ show:false, msg:'' })
   const timerRef = useRef(null)
 
   // helpers para limpiar formularios
   const resetLogin  = () => setLogin({ email:'', password:'' })
   const resetSignup = () => setSignup({ name:'', role:'', grade:'', email:'', p1:'', p2:'', code:'' })
-  const goTab = (next) => { setTab(next); if (next==='login') resetLogin(); if (next==='signup') resetSignup() }
+  const clearForgot = () => { setForgotMode(false); setForgotEmail(''); setForgotLoading(false) }
+  const clearResetToken = (removeQuery = false) => {
+    setResetToken('')
+    setResetForm({ password:'', confirm:'' })
+    setResetLoading(false)
+    if (removeQuery && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('token')
+      window.history.replaceState({}, document.title, url.toString())
+    }
+  }
+  const goTab = (next) => {
+    setTab(next)
+    if (next==='login') {
+      resetLogin()
+      clearForgot()
+    }
+    if (next==='signup') {
+      resetSignup()
+      clearForgot()
+      clearResetToken(true)
+    }
+  }
 
   const showToast = (msg, ms=3600) => {
     setToast({ show:true, msg })
@@ -69,14 +142,27 @@ export default function AuthPage(){
 
   // AUTO /me — solo marcamos sesión si /me trae user o datos claros
   useEffect(() => {
-    (async () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const token = params.get('token')
+      if (token) {
+        setTab('login')
+        clearForgot()
+        setResetToken(token)
+      }
+    }
+
+    if (!tokenStore.get()) return
+    ;(async () => {
       try {
-        const me = await api.me() // ideal: { user: {name,email,role} }
-        if (me && me.user)       setUser(me.user)
-        else if (me && (me.email || me.role)) setUser({ name: me.name, email: me.email, role: me.role })
-        else                     setUser(null)
-      } catch { setUser(null) }   // 401/404 => no logueado
-    })();
+        const me = await api.me()
+        if (me?.user) setUser(normalizeUser(me.user))
+      } catch {
+        tokenStore.clear()
+        setUser(null)
+      }
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const sendCode = async () => {
@@ -97,7 +183,11 @@ export default function AuthPage(){
     if (signup.role==='ESTUDIANTE' && !signup.grade) return showToast('Selecciona tu grado')
 
     const payload = { name: signup.name.trim(), email: signup.email.trim(), role: signup.role, password: signup.p1 }
-    if (signup.role==='ESTUDIANTE') payload.grade = signup.grade
+    if (signup.role==='ESTUDIANTE') {
+      const gradeNumber = parseGradeNumber(signup.grade)
+      if (gradeNumber) payload.grado = gradeNumber
+      payload.grade = signup.grade
+    }
     if (signup.role==='DOCENTE' || signup.role==='ADMIN') {
       if (!signup.code.trim()) return showToast('Ingresa el código de verificación')
       payload.code = signup.code.trim()
@@ -106,12 +196,13 @@ export default function AuthPage(){
     try {
       setLoadingS(true)
       const res = await api.register(payload)
-      if (res?.user) setUser(res.user)
-      else {
+      if (res?.token) tokenStore.set(res.token)
+      if (res?.user) {
+        setUser(normalizeUser(res.user))
+      } else {
         const me = await api.me().catch(()=>null)
-        if (me?.user) setUser(me.user)
-        else if (me?.email || me?.role) setUser({ name: me.name, email: me.email, role: me.role })
-        else setUser({ name: payload.name, email: payload.email, role: payload.role, grade: payload.grade }) // fallback
+        if (me?.user) setUser(normalizeUser(me.user))
+        else setUser(normalizeUser({ ...payload, grade: payload.grade }))
       }
       resetSignup()
     } catch (e) {
@@ -127,12 +218,12 @@ export default function AuthPage(){
     try {
       setLoadingL(true)
       const res = await api.login(login.email.trim(), login.password)
-      if (res?.user) setUser(res.user)
+      if (res?.token) tokenStore.set(res.token)
+      if (res?.user) setUser(normalizeUser(res.user))
       else {
         const me = await api.me().catch(()=>null)
-        if (me?.user) setUser(me.user)
-        else if (me?.email || me?.role) setUser({ name: me.name, email: me.email, role: me.role })
-        else setUser({ email: login.email.trim(), role:'ESTUDIANTE', grade:'1ro. Básico' }) // fallback
+        if (me?.user) setUser(normalizeUser(me.user))
+        else setUser(normalizeUser({ email: login.email.trim(), role:'ESTUDIANTE', grade:'1ro. Básico' }))
       }
       resetLogin()
     } catch (e) {
@@ -143,10 +234,47 @@ export default function AuthPage(){
   }
 
   const onLogout = async () => {
+    tokenStore.clear()
     setUser(null)
     goTab('login')
     resetLogin()
     resetSignup()
+    clearResetToken(true)
+  }
+
+  const onForgot = async (e) => {
+    e.preventDefault()
+    const email = forgotEmail.trim()
+    if (!email) return showToast('Ingresa tu correo electrónico')
+    try {
+      setForgotLoading(true)
+      await api.forgotPassword(email)
+      showToast('Te enviamos un enlace para restablecer tu contraseña.')
+      setForgotMode(false)
+      setForgotEmail('')
+    } catch (err) {
+      showToast(err.message || 'No pudimos enviar el correo de recuperación')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const onReset = async (e) => {
+    e.preventDefault()
+    if (!resetToken) return showToast('El enlace de restablecimiento no es válido')
+    if (!resetForm.password || resetForm.password.length < 8) return showToast('La nueva contraseña debe tener al menos 8 caracteres')
+    if (resetForm.password !== resetForm.confirm) return showToast('Las contraseñas no coinciden')
+    try {
+      setResetLoading(true)
+      await api.resetPassword(resetToken, resetForm.password)
+      showToast('Contraseña actualizada. Inicia sesión con tu nueva contraseña.')
+      clearResetToken(true)
+      clearForgot()
+    } catch (err) {
+      showToast(err.message || 'No se pudo restablecer la contraseña')
+    } finally {
+      setResetLoading(false)
+    }
   }
 
   return (
@@ -166,25 +294,67 @@ export default function AuthPage(){
               </div>
 
               {tab==='login' ? (
-                <form onSubmit={onLogin} autoComplete="on">
-                  <div>
-                    <label className="field" htmlFor="lemail">Correo electrónico</label>
-                    <input className="input" id="lemail" type="email" placeholder="tucorreo@gmail.com" required
-                      value={login.email} onChange={e=>setLogin(v=>({...v, email:e.target.value}))}/>
-                  </div>
-                  <div>
-                    <label className="field" htmlFor="lpass">Contraseña</label>
-                    <div className="input-wrap">
-                      <input className="input" id="lpass" type="password" placeholder="••••••••" required
-                        value={login.password} onChange={e=>setLogin(v=>({...v, password:e.target.value}))}/>
-                      <div className="eye-btn"><Eye targetId="lpass" /></div>
+                resetToken ? (
+                  <form onSubmit={onReset} autoComplete="off">
+                    <div>
+                      <label className="field" htmlFor="newpass">Nueva contraseña</label>
+                      <div className="input-wrap">
+                        <input className="input" id="newpass" type="password" placeholder="Mínimo 8 caracteres" required
+                          value={resetForm.password}
+                          onChange={e=>setResetForm(v=>({...v, password:e.target.value}))}/>
+                        <div className="eye-btn"><Eye targetId="newpass" /></div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="actions">
-                    <a className="link" href="#">¿Olvidaste tu contraseña?</a>
-                    <button className="btn" type="submit" disabled={loadingL}>{loadingL?'Entrando...':'Entrar'}</button>
-                  </div>
-                </form>
+                    <div>
+                      <label className="field" htmlFor="newpass2">Confirmar contraseña</label>
+                      <div className="input-wrap">
+                        <input className="input" id="newpass2" type="password" placeholder="Repite tu nueva contraseña" required
+                          value={resetForm.confirm}
+                          onChange={e=>setResetForm(v=>({...v, confirm:e.target.value}))}/>
+                        <div className="eye-btn"><Eye targetId="newpass2" /></div>
+                      </div>
+                    </div>
+                    <p className="muted" style={{ marginTop:10 }}>Introduce una nueva contraseña para reactivar tu cuenta.</p>
+                    <div className="actions">
+                      <button type="button" className="btn-secondary" onClick={()=>{ clearResetToken(true); clearForgot(); }}>Cancelar</button>
+                      <button className="btn" type="submit" disabled={resetLoading}>{resetLoading?'Actualizando...':'Actualizar contraseña'}</button>
+                    </div>
+                  </form>
+                ) : forgotMode ? (
+                  <form onSubmit={onForgot} autoComplete="off">
+                    <div>
+                      <label className="field" htmlFor="forgotEmail">Correo electrónico</label>
+                      <input className="input" id="forgotEmail" type="email" placeholder="tucorreo@gmail.com" required
+                        value={forgotEmail}
+                        onChange={e=>setForgotEmail(e.target.value)} />
+                    </div>
+                    <p className="muted" style={{ marginTop:10 }}>Te enviaremos un enlace para restablecer tu contraseña.</p>
+                    <div className="actions">
+                      <button type="button" className="btn-secondary" onClick={()=>{ setForgotMode(false); setForgotEmail(''); }}>Volver</button>
+                      <button className="btn" type="submit" disabled={forgotLoading}>{forgotLoading?'Enviando...':'Enviar correo'}</button>
+                    </div>
+                  </form>
+                ) : (
+                  <form onSubmit={onLogin} autoComplete="on">
+                    <div>
+                      <label className="field" htmlFor="lemail">Correo electrónico</label>
+                      <input className="input" id="lemail" type="email" placeholder="tucorreo@gmail.com" required
+                        value={login.email} onChange={e=>setLogin(v=>({...v, email:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="field" htmlFor="lpass">Contraseña</label>
+                      <div className="input-wrap">
+                        <input className="input" id="lpass" type="password" placeholder="••••••••" required
+                          value={login.password} onChange={e=>setLogin(v=>({...v, password:e.target.value}))}/>
+                        <div className="eye-btn"><Eye targetId="lpass" /></div>
+                      </div>
+                    </div>
+                    <div className="actions">
+                      <button type="button" className="link" onClick={()=>{ setForgotMode(true); setForgotEmail(login.email.trim()); clearResetToken(true); }}>¿Olvidaste tu contraseña?</button>
+                      <button className="btn" type="submit" disabled={loadingL}>{loadingL?'Entrando...':'Entrar'}</button>
+                    </div>
+                  </form>
+                )
               ) : (
                 <form onSubmit={onSignup} autoComplete="on">
                   <div className="row">
@@ -303,7 +473,7 @@ function renderDashboard(user){
   return <EmptyDashboard role={user?.role} />
 }
 
-const GRADE_OPTIONS = ['1ro. Básico', '2do. Básico', '3ro. Básico']
+const GRADE_OPTIONS = Object.values(GRADE_LABELS)
 
 const STUDENT_DASHBOARD_DATA = {
   '1ro. Básico': {
@@ -435,6 +605,12 @@ function StudentDashboard({ user }) {
   useEffect(() => {
     setNotifications(info.notifications)
   }, [info])
+
+  useEffect(() => {
+    if (user?.grade && GRADE_OPTIONS.includes(user.grade)) {
+      setSelectedGrade(user.grade)
+    }
+  }, [user?.grade])
 
   const maxMinutes = Math.max(...info.usage.sessions.map(s => s.minutes), 1)
   const attemptsLeft = info.attempts.limit - info.attempts.used
