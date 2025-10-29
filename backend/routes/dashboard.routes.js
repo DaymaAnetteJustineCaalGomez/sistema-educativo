@@ -132,7 +132,9 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
     const userId = toObjectId(req.user.id)
     if (!userId) return res.status(400).json({ error: 'Usuario inválido' })
 
-    const user = await Usuario.findById(userId).lean()
+    const user = await Usuario.findById(userId)
+      .select('nombre email rol grado createdAt updatedAt')
+      .lean()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
     const gradeCode = gradeNumberToCode(user.grado)
@@ -331,7 +333,9 @@ router.get('/student/courses/:areaId', authRequired, allowRoles('ESTUDIANTE'), a
     const areaId = toObjectId(req.params.areaId)
     if (!userId || !areaId) return res.status(400).json({ error: 'Parámetros inválidos' })
 
-    const user = await Usuario.findById(userId).lean()
+    const user = await Usuario.findById(userId)
+      .select('nombre email rol grado createdAt updatedAt')
+      .lean()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
     const gradeCode = gradeNumberToCode(user.grado)
@@ -444,7 +448,9 @@ router.get('/student/courses/:areaId', authRequired, allowRoles('ESTUDIANTE'), a
 
 router.get('/teacher', authRequired, allowRoles('DOCENTE', 'ADMIN'), async (req, res, next) => {
   try {
-    const students = await Usuario.find({ rol: 'ESTUDIANTE' }).lean()
+    const students = await Usuario.find({ rol: 'ESTUDIANTE' })
+      .select('nombre email rol grado createdAt updatedAt')
+      .lean()
     if (!students.length) {
       return res.json({
         summary: { promedioGeneral: 0, cobertura: 0, progresoPromedio: 0, abandono: 0 },
@@ -658,7 +664,9 @@ router.get('/teacher', authRequired, allowRoles('DOCENTE', 'ADMIN'), async (req,
 
 router.get('/admin', authRequired, allowRoles('ADMIN'), async (req, res, next) => {
   try {
-    const users = await Usuario.find().lean()
+    const users = await Usuario.find()
+      .select('nombre email rol grado createdAt updatedAt')
+      .lean()
     const students = users.filter((u) => u.rol === 'ESTUDIANTE')
 
     const roleCounts = users.reduce(
