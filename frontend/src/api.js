@@ -1,5 +1,20 @@
-// Toma la URL base del backend desde .env
-const BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '')
+// Toma la URL base del backend desde .env y cae en un valor por defecto funcional
+const inferBaseUrl = () => {
+  const envBase = (import.meta?.env?.VITE_API_BASE || '').trim();
+  if (envBase) return envBase.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location;
+    if (port === '5173' || port === '4173') {
+      return `${protocol}//${hostname}:5002`;
+    }
+    return `${protocol}//${hostname}${port ? `:${port}` : ''}`.replace(/\/+$/, '');
+  }
+
+  return 'http://localhost:5002';
+};
+
+const BASE = inferBaseUrl();
 const PREFIX = '/api/auth'
 const CNB_PREFIX = '/api/cnb'
 
@@ -35,7 +50,7 @@ export const API = {
 }
 
 async function fetchJSON(url, opts = {}) {
-  const { body, headers, ...rest } = opts
+  const { body, headers, ...rest } = opts || {}
   const finalHeaders = { ...(headers || {}) }
 
   if (body && !(body instanceof FormData) && typeof body !== 'string') {
@@ -65,11 +80,20 @@ async function fetchJSON(url, opts = {}) {
   return data
 }
 
+const withSignalOption = (options) => {
+  if (!options) return {}
+  if (typeof AbortSignal !== 'undefined' && options instanceof AbortSignal) {
+    return { signal: options }
+  }
+  return options
+}
+
 export const api = {
   sendCode: (email, role) => fetchJSON(API.sendCode, { method: 'POST', body: { email, role } }),
   register: (payload)     => fetchJSON(API.register, { method: 'POST', body: payload }),
   login:    (email, password) => fetchJSON(API.login, { method: 'POST', body: { email, password } }),
   me:       () => fetchJSON(API.me),
-  cursosBasico: (grado = 1) => fetchJSON(`${BASE}${CNB_PREFIX}/basico/${grado}/cursos`),
+  cursosBasico: (grado = 1, options) =>
+    fetchJSON(`${BASE}${CNB_PREFIX}/basico/${grado}/cursos`, withSignalOption(options)),
   // logout:   () => fetchJSON(API.logout, { method:'POST' }),
 }
