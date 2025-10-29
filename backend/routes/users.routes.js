@@ -22,23 +22,57 @@ router.get('/me', authRequired, async (req, res) => {
  * Body: { grado?: 1|2|3, nombre?: string, avatar?: string }
  */
 router.patch('/me', authRequired, async (req, res) => {
-  const allowed = ['grado', 'nombre', 'avatar'];
-  const updates = {};
-  for (const k of allowed) if (k in req.body) updates[k] = req.body[k];
+  const allowed = ['grado', 'nombre'];
+  const hasAllowed = allowed.some((key) => Object.prototype.hasOwnProperty.call(req.body, key));
+  if (!hasAllowed) {
+    const user = await Usuario.findById(req.user.id)
+      .select('-password -passwordHash -passwordResetToken -passwordResetExpires -__v');
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    return res.json({ user });
+  }
 
-  if ('grado' in updates) {
-    const g = Number(updates.grado);
+  const user = await Usuario.findById(req.user.id)
+    .select('+grado -password -passwordHash -passwordResetToken -passwordResetExpires -__v');
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  let touched = false;
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'grado')) {
+    const g = Number(req.body.grado);
     if (![1, 2, 3].includes(g)) {
       return res.status(400).json({ error: 'Grado inválido. Use 1, 2 o 3.' });
     }
-    updates.grado = g;
+
+    if (user.grado && user.grado !== g) {
+      return res
+        .status(409)
+        .json({ error: 'El grado ya fue asignado. Contacta a administración para cambios.' });
+    }
+
+    if (!user.grado) {
+      user.grado = g;
+      touched = true;
+    }
   }
 
-  const user = await Usuario.findByIdAndUpdate(req.user.id, updates, { new: true })
-    .select('-password -passwordHash -passwordResetToken -passwordResetExpires -__v');
-  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  if (Object.prototype.hasOwnProperty.call(req.body, 'nombre')) {
+    const nombre = String(req.body.nombre || '').trim();
+    if (nombre && nombre !== user.nombre) {
+      user.nombre = nombre;
+      touched = true;
+    }
+  }
 
-  res.json({ user });
+  if (touched) {
+    await user.save({ validateBeforeSave: false });
+  }
+
+  const fresh = await Usuario.findById(req.user.id)
+    .select('-password -passwordHash -passwordResetToken -passwordResetExpires -__v')
+    .lean();
+  if (!fresh) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  res.json({ user: fresh });
 });
 
 export default router;

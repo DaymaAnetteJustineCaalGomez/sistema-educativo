@@ -397,7 +397,7 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 
 /* === Dashboard layout === */
 .dashboard-shell {
-  width: min(1360px, calc(100% - 3rem));
+  width: min(1440px, calc(100% - 3rem));
   margin: 2.5rem auto;
   display: flex;
   flex-direction: column;
@@ -406,7 +406,7 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 }
 
 .grade-shell {
-  width: min(960px, calc(100% - 3rem));
+  width: min(1080px, calc(100% - 3rem));
   margin: 3.5rem auto;
   padding: clamp(2rem, 5vw, 3.5rem);
   border-radius: 32px;
@@ -421,11 +421,25 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 }
 
 .grade-card {
-  width: min(560px, 100%);
+  width: min(900px, 100%);
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
   text-align: center;
+}
+
+.grade-card-inner {
+  display: grid;
+  gap: clamp(2rem, 4vw, 3rem);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.grade-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: left;
 }
 
 .grade-card-header {
@@ -433,6 +447,10 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   flex-direction: column;
   gap: 0.75rem;
   align-items: center;
+}
+
+.grade-card-copy .grade-card-header {
+  align-items: flex-start;
 }
 
 .grade-card-header h2 {
@@ -452,11 +470,59 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   color: #ffffff;
 }
 
+.grade-body {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #e5e8ff;
+}
+
+.grade-benefits {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+  color: #d7dbff;
+}
+
+.grade-benefits li {
+  position: relative;
+  padding-left: 1.75rem;
+  font-size: 0.95rem;
+}
+
+.grade-benefits li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #8ef0ff;
+  font-weight: 600;
+}
+
+.grade-card-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: rgba(18, 22, 60, 0.6);
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  border-radius: 24px;
+  border: 1px solid rgba(140, 150, 255, 0.25);
+  box-shadow: 0 12px 28px rgba(12, 16, 48, 0.35);
+  text-align: left;
+}
+
+.grade-card-selector h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #ffffff;
+}
+
 .grade-options {
   display: grid;
   width: 100%;
   gap: 1.2rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .grade-option {
@@ -504,6 +570,21 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 .grade-error {
   color: #ffb8c9;
   font-weight: 600;
+}
+
+@media (max-width: 960px) {
+  .grade-card {
+    text-align: left;
+  }
+  .grade-card-inner {
+    grid-template-columns: 1fr;
+  }
+  .grade-card-header {
+    align-items: flex-start;
+  }
+  .grade-card-selector {
+    padding: 1.25rem;
+  }
 }
 
 .dashboard-shell.loading,
@@ -863,6 +944,13 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.data-table .empty-row td {
+  text-align: center;
+  padding: 1.25rem 1rem;
+  color: #d0d4ff;
+  font-size: 0.9rem;
 }
 
 .data-table th {

@@ -132,6 +132,7 @@ export default function TeacherDashboard({ user }) {
 
   if (!data) return null
 
+  const studentRows = Array.isArray(data?.students) ? data.students : []
   const summaryCards = [
     { title: 'Promedio general', value: data.summary?.promedioGeneral ? `${data.summary.promedioGeneral} pts` : 'Sin datos', detail: 'Últimos indicadores evaluados' },
     { title: 'Cobertura CNB', value: formatPercent(data.summary?.cobertura), detail: 'Avance total vs plan' },
@@ -190,17 +191,23 @@ export default function TeacherDashboard({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {data.students?.map((student) => (
-                  <tr key={student.id}>
-                    <td>{student.nombre}</td>
-                    <td>{student.grado}</td>
-                    <td>{student.promedio ? `${student.promedio} pts` : '—'}</td>
-                    <td>{formatPercent(student.progreso)}</td>
-                    <td>{formatNumber(student.completados)}</td>
-                    <td>{formatPercent(student.abandono)}</td>
-                    <td>{student.frecuencia}</td>
+                {studentRows.length ? (
+                  studentRows.map((student) => (
+                    <tr key={student.id}>
+                      <td>{student.nombre}</td>
+                      <td>{student.grado}</td>
+                      <td>{student.promedio ? `${student.promedio} pts` : '—'}</td>
+                      <td>{formatPercent(student.progreso)}</td>
+                      <td>{formatNumber(student.completados)}</td>
+                      <td>{formatPercent(student.abandono)}</td>
+                      <td>{student.frecuencia}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr className="empty-row">
+                    <td colSpan={7}>No hay estudiantes con actividad registrada todavía.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

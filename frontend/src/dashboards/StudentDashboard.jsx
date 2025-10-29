@@ -123,6 +123,14 @@ function HistoryList({ items }) {
 
 function CourseDetailModal({ course, detail, loading, error, onClose }) {
   if (!course) return null
+  const resumen = detail?.resumen || {
+    totalIndicadores: 0,
+    completados: 0,
+    progreso: 0,
+    promedio: null,
+  }
+  const competencias = Array.isArray(detail?.competencias) ? detail.competencias : []
+
   return (
     <div className="modal-backdrop">
       <div className="modal-card">
@@ -142,71 +150,90 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
             <section className="modal-summary">
               <div>
                 <span className="card-label">Indicadores</span>
-                <strong>{detail.resumen.totalIndicadores}</strong>
+                <strong>{resumen.totalIndicadores}</strong>
               </div>
               <div>
                 <span className="card-label">Completados</span>
-                <strong>{detail.resumen.completados}</strong>
+                <strong>{resumen.completados}</strong>
               </div>
               <div>
                 <span className="card-label">Progreso</span>
-                <strong>{formatPercent(detail.resumen.progreso)}</strong>
+                <strong>{formatPercent(resumen.progreso)}</strong>
               </div>
               <div>
                 <span className="card-label">Promedio</span>
                 <strong>
-                  {typeof detail.resumen.promedio === 'number'
-                    ? `${detail.resumen.promedio} pts`
-                    : 'Sin datos'}
+                  {typeof resumen.promedio === 'number' ? `${resumen.promedio} pts` : 'Sin datos'}
                 </strong>
               </div>
             </section>
             <div className="competence-list">
-              {detail.competencias.map((comp) => (
-                <article key={comp.id} className="competence-card">
-                  <header>
-                    <strong>{comp.codigo || 'Competencia'}</strong>
-                    <span className="muted">{comp.enunciado}</span>
-                    <span className="badge info">{formatPercent(comp.progreso)}</span>
-                  </header>
-                  <ul className="indicator-list">
-                    {comp.indicadores.map((ind) => (
-                      <li key={ind.id}>
-                        <div className="indicator-header">
-                          <strong>{ind.codigo}</strong>
-                          <span className={`badge ${ind.estado === 'completado' ? 'success' : ind.estado === 'en_progreso' ? 'warning' : 'muted'}`}>
-                            {ind.estado.replace('_', ' ')}
-                          </span>
-                          {typeof ind.puntuacion === 'number' ? <span className="badge info">{ind.puntuacion} pts</span> : null}
-                        </div>
-                        {ind.descripcion ? <p>{ind.descripcion}</p> : null}
-                        {Array.isArray(ind.contenidos) && ind.contenidos.length ? (
-                          <ul className="content-list">
-                            {ind.contenidos.map((contenido) => (
-                              <li key={contenido.codigo || contenido.titulo}>
-                                <span>{contenido.codigo}</span>
-                                <p>{contenido.titulo}</p>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        {ind.recursos && ind.recursos.length ? (
-                          <ul className="resource-list compact">
-                            {ind.recursos.map((resource) => (
-                              <li key={resource._id}>
-                                <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                                  {resource.titulo}
-                                </a>
-                                <span className="muted">{resource.tipo}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+              {competencias.length ? (
+                competencias.map((comp) => {
+                  const indicadores = Array.isArray(comp.indicadores) ? comp.indicadores : []
+                  return (
+                    <article key={comp.id || comp.codigo} className="competence-card">
+                      <header>
+                        <strong>{comp.codigo || 'Competencia'}</strong>
+                        <span className="muted">{comp.enunciado}</span>
+                        <span className="badge info">{formatPercent(comp.progreso)}</span>
+                      </header>
+                      <ul className="indicator-list">
+                        {indicadores.map((ind) => {
+                          const contenidos = Array.isArray(ind.contenidos) ? ind.contenidos : []
+                          const recursos = Array.isArray(ind.recursos) ? ind.recursos : []
+                          return (
+                            <li key={ind.id || ind.codigo}>
+                              <div className="indicator-header">
+                                <strong>{ind.codigo}</strong>
+                                <span
+                                  className={`badge ${
+                                    ind.estado === 'completado'
+                                      ? 'success'
+                                      : ind.estado === 'en_progreso'
+                                      ? 'warning'
+                                      : 'muted'
+                                  }`}
+                                >
+                                  {(ind.estado || 'pendiente').replace('_', ' ')}
+                                </span>
+                                {typeof ind.puntuacion === 'number' ? (
+                                  <span className="badge info">{ind.puntuacion} pts</span>
+                                ) : null}
+                              </div>
+                              {ind.descripcion ? <p>{ind.descripcion}</p> : null}
+                              {contenidos.length ? (
+                                <ul className="content-list">
+                                  {contenidos.map((contenido) => (
+                                    <li key={contenido.codigo || contenido.titulo}>
+                                      {contenido.codigo ? <span>{contenido.codigo}</span> : null}
+                                      <p>{contenido.titulo}</p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                              {recursos.length ? (
+                                <ul className="resource-list compact">
+                                  {recursos.map((resource) => (
+                                    <li key={resource._id || resource.url}>
+                                      <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                                        {resource.titulo || 'Recurso sugerido'}
+                                      </a>
+                                      <span className="muted">{resource.tipo || 'Recurso'}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : null}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </article>
+                  )
+                })
+              ) : (
+                <p className="muted">No hay competencias registradas para este curso.</p>
+              )}
             </div>
           </div>
         ) : (
@@ -228,36 +255,51 @@ function GradeSelection({ user, options, onSelect, saving, error }) {
   return (
     <div className="grade-shell">
       <div className="grade-card">
-        <header className="grade-card-header">
-          <div>
-            <h2>{displayName}</h2>
-            <span className="badge">ESTUDIANTE</span>
-          </div>
-          <p className="grade-lead">El estudiante no tiene grado asignado</p>
-        </header>
-        <p className="muted">
-          Selecciona tu grado para activar tu tablero y acceder a los contenidos del CNB.
-        </p>
-        <div className="grade-options">
-          {gradeOptions.map((option) => (
-            <button
-              key={option.number || option.code}
-              type="button"
-              className="grade-option"
-              onClick={() => onSelect(option.number)}
-              disabled={Boolean(saving)}
-            >
-              <span className="grade-option-title">{option.label}</span>
-              {option.description ? (
-                <span className="grade-option-sub">{option.description}</span>
-              ) : null}
-              <span className="grade-option-cta">
-                {saving === option.number ? 'Asignando…' : 'Ver contenidos'}
-              </span>
-            </button>
-          ))}
+        <div className="grade-card-inner">
+          <section className="grade-card-copy">
+            <header className="grade-card-header">
+              <div>
+                <h2>{displayName}</h2>
+                <span className="badge">ESTUDIANTE</span>
+              </div>
+              <p className="grade-lead">Selecciona tu grado para personalizar tu experiencia.</p>
+            </header>
+            <p className="grade-body">
+              Vinculamos tus avances con el Currículo Nacional Base de Guatemala (CNB).
+              Elige el grado correspondiente para habilitar tu tablero, progreso y recursos
+              recomendados según tu nivel.
+            </p>
+            <ul className="grade-benefits">
+              <li>Contenido oficial organizado por competencias e indicadores.</li>
+              <li>Seguimiento de progreso y recomendaciones inteligentes.</li>
+              <li>Sincronización con tus intentos y reportes en tiempo real.</li>
+            </ul>
+          </section>
+          <section className="grade-card-selector">
+            <h3>Grados disponibles</h3>
+            <p className="muted">Esta elección queda registrada y será utilizada en tus reportes.</p>
+            <div className="grade-options">
+              {gradeOptions.map((option) => (
+                <button
+                  key={option.number || option.code}
+                  type="button"
+                  className="grade-option"
+                  onClick={() => onSelect(option.number)}
+                  disabled={Boolean(saving)}
+                >
+                  <span className="grade-option-title">{option.label}</span>
+                  {option.description ? (
+                    <span className="grade-option-sub">{option.description}</span>
+                  ) : null}
+                  <span className="grade-option-cta">
+                    {saving === option.number ? 'Asignando…' : 'Iniciar plan'}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {error ? <p className="grade-error">{error}</p> : null}
+          </section>
         </div>
-        {error ? <p className="grade-error">{error}</p> : null}
       </div>
     </div>
   )
@@ -297,7 +339,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
 
   const summaryCards = useMemo(() => {
     if (!data) return []
-    const { summary } = data
+    const summary = data.summary || {}
     return [
       {
         title: 'Promedio general',
@@ -329,9 +371,14 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     setSelectedCourse(course)
     setCourseDetail(null)
     setCourseError(null)
+    const areaId = course?.areaId
+    if (!areaId) {
+      setCourseError('No se pudo identificar el área seleccionada.')
+      return
+    }
     try {
       setCourseLoading(true)
-      const detail = await api.studentCourseDetail(course.areaId)
+      const detail = await api.studentCourseDetail(areaId)
       setCourseDetail(detail)
     } catch (err) {
       setCourseError(err.message || 'No se pudo cargar el curso')
@@ -397,6 +444,10 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     )
   }
 
+  const courses = Array.isArray(data.cursos) ? data.cursos : []
+  const notifications = Array.isArray(data.notificaciones) ? data.notificaciones : []
+  const historyItems = Array.isArray(data.historial) ? data.historial : []
+  const recommendations = Array.isArray(data.recomendaciones) ? data.recomendaciones : []
   const attemptsLabel = formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite || 3 })
 
   return (
@@ -435,9 +486,11 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             </div>
           </header>
           <div className="progress-list">
-            {data.cursos.map((course) => (
-              <ProgressRow key={course.areaId} course={course} />
-            ))}
+            {courses.length ? (
+              courses.map((course) => <ProgressRow key={course.areaId || course.titulo} course={course} />)
+            ) : (
+              <p className="muted">Aún no hay progreso registrado para tu grado.</p>
+            )}
           </div>
         </article>
         <article className="dash-card">
@@ -464,18 +517,29 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             </div>
           </header>
           <div className="course-grid">
-            {data.cursos.map((course) => (
-              <button key={course.areaId} className="course-card" type="button" onClick={() => openCourse(course)}>
-                <div className="course-progress">
-                  <span className="pill info">{formatPercent(course.progreso)}</span>
-                  <span>{course.completados} / {course.totalIndicadores} completados</span>
-                </div>
-                <strong>{course.titulo}</strong>
-                {course.siguiente ? (
-                  <span className="muted">Próximo: {course.siguiente.codigo || course.siguiente.descripcion}</span>
-                ) : <span className="muted">Todo al día</span>}
-              </button>
-            ))}
+            {courses.length ? (
+              courses.map((course) => (
+                <button
+                  key={course.areaId || course.titulo}
+                  className="course-card"
+                  type="button"
+                  onClick={() => openCourse(course)}
+                >
+                  <div className="course-progress">
+                    <span className="pill info">{formatPercent(course.progreso)}</span>
+                    <span>{course.completados} / {course.totalIndicadores} completados</span>
+                  </div>
+                  <strong>{course.titulo}</strong>
+                  {course.siguiente ? (
+                    <span className="muted">Próximo: {course.siguiente.codigo || course.siguiente.descripcion}</span>
+                  ) : (
+                    <span className="muted">Todo al día</span>
+                  )}
+                </button>
+              ))
+            ) : (
+              <p className="muted">No encontramos áreas del CNB configuradas para tu grado.</p>
+            )}
           </div>
         </article>
         <article className="dash-card">
@@ -486,9 +550,9 @@ export default function StudentDashboard({ user, onUserUpdate }) {
             </div>
           </header>
           <div className="recommendation-grid">
-            {data.recomendaciones?.length ? (
-              data.recomendaciones.map((item) => (
-                <RecommendationBlock key={item.indicadorId} item={item} />
+            {recommendations.length ? (
+              recommendations.map((item) => (
+                <RecommendationBlock key={item.indicadorId || item._id} item={item} />
               ))
             ) : (
               <p className="muted">No hay recomendaciones activas.</p>
@@ -505,7 +569,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               <span className="muted">Correos y alertas enviadas</span>
             </div>
           </header>
-          <NotificationList items={data.notificaciones || []} />
+          <NotificationList items={notifications} />
         </article>
         <article className="dash-card">
           <header className="section-header">
@@ -514,7 +578,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
               <span className="muted">Intentos y acciones recientes</span>
             </div>
           </header>
-          <HistoryList items={data.historial || []} />
+          <HistoryList items={historyItems} />
         </article>
       </section>
 
