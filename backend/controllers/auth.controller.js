@@ -8,7 +8,18 @@ import { registerCodeTemplate, resetPasswordTemplate } from "../utils/emailTempl
 // Helpers
 const normEmail = (e = "") => String(e).trim().toLowerCase();
 const genCode = () => Math.floor(100000 + Math.random() * 900000).toString();
-const defaultSecret = process.env.JWT_SECRET || "change_me";
+const getJwtSecret = () => {
+  const raw = process.env.JWT_SECRET;
+  const secret = typeof raw === "string" && raw.trim().length ? raw.trim() : "change_me";
+  return secret;
+};
+
+const getJwtExpires = () => {
+  const raw = process.env.JWT_EXPIRES;
+  const expires = typeof raw === "string" && raw.trim().length ? raw.trim() : "1d";
+  return expires;
+};
+
 const signToken = (user) => {
   const plain = typeof user?.toObject === "function" ? user.toObject() : user;
   const payload = {
@@ -17,8 +28,8 @@ const signToken = (user) => {
     role: plain?.rol || plain?.role,
     email: plain?.email,
   };
-  const secret = defaultSecret;
-  const expiresIn = process.env.JWT_EXPIRES || "1d";
+  const secret = getJwtSecret();
+  const expiresIn = getJwtExpires();
   return jwt.sign(payload, secret, { expiresIn });
 };
 
