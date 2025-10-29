@@ -13,6 +13,7 @@ if (typeof window !== 'undefined' && window.location) {
 const envBase = (import.meta.env.VITE_API_BASE || '').trim()
 const BASE = (envBase.length ? envBase : fallback).replace(/\/+$/, '')
 const PREFIX = '/api/auth'
+const DASHBOARD_PREFIX = '/api/dashboard'
 
 const TOKEN_KEY = 'sistema-educativo.token'
 
@@ -72,6 +73,10 @@ export const api = {
   me:       () => fetchJSON(API.me),
   forgotPassword: (email) => fetchJSON(`${BASE}${PREFIX}/forgot-password`, { method: 'POST', body: JSON.stringify({ email }) }),
   resetPassword: (token, password) => fetchJSON(`${BASE}${PREFIX}/reset-password`, { method: 'POST', body: JSON.stringify({ token, password }) }),
+  studentDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/student`),
+  studentCourseDetail: (courseId) => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/student/courses/${courseId}`),
+  teacherDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/teacher`),
+  adminDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/admin`),
   storeToken: tokenStore,
   // logout:   () => fetchJSON(API.logout, { method:'POST' }),
 }

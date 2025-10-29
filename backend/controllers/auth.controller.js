@@ -139,6 +139,9 @@ export const registerWithOtp = async (req, res, next) => {
     // ESTUDIANTE: no requiere OTP (y ya NO guardamos 'grado' aquí)
     if (role === "ESTUDIANTE") {
       const grade = normalizeGrade(req.body.grado ?? req.body.grade);
+      if (!grade) {
+        return res.status(400).json({ message: "Selecciona un grado válido (1, 2 o 3)" });
+      }
       const user = await Usuario.create({
         nombre,
         email,
