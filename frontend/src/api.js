@@ -77,6 +77,7 @@ export const api = {
   studentCourseDetail: (courseId) => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/student/courses/${courseId}`),
   teacherDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/teacher`),
   adminDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/admin`),
+  updateProfile: (payload) => fetchJSON(`${BASE}/api/users/me`, { method: 'PATCH', body: JSON.stringify(payload) }),
   storeToken: tokenStore,
   // logout:   () => fetchJSON(API.logout, { method:'POST' }),
 }

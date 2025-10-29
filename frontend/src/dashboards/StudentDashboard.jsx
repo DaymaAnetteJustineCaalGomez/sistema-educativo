@@ -217,7 +217,53 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
   )
 }
 
-export default function StudentDashboard({ user }) {
+function GradeSelection({ user, options, onSelect, saving, error }) {
+  const displayName = user?.nombre || user?.name || user?.email || 'Estudiante'
+  const gradeOptions = options && options.length ? options : [
+    { number: 1, label: '1ro. Básico', description: 'Plan oficial CNB' },
+    { number: 2, label: '2do. Básico', description: 'Plan oficial CNB' },
+    { number: 3, label: '3ro. Básico', description: 'Plan oficial CNB' },
+  ]
+
+  return (
+    <div className="grade-shell">
+      <div className="grade-card">
+        <header className="grade-card-header">
+          <div>
+            <h2>{displayName}</h2>
+            <span className="badge">ESTUDIANTE</span>
+          </div>
+          <p className="grade-lead">El estudiante no tiene grado asignado</p>
+        </header>
+        <p className="muted">
+          Selecciona tu grado para activar tu tablero y acceder a los contenidos del CNB.
+        </p>
+        <div className="grade-options">
+          {gradeOptions.map((option) => (
+            <button
+              key={option.number || option.code}
+              type="button"
+              className="grade-option"
+              onClick={() => onSelect(option.number)}
+              disabled={Boolean(saving)}
+            >
+              <span className="grade-option-title">{option.label}</span>
+              {option.description ? (
+                <span className="grade-option-sub">{option.description}</span>
+              ) : null}
+              <span className="grade-option-cta">
+                {saving === option.number ? 'Asignando…' : 'Ver contenidos'}
+              </span>
+            </button>
+          ))}
+        </div>
+        {error ? <p className="grade-error">{error}</p> : null}
+      </div>
+    </div>
+  )
+}
+
+export default function StudentDashboard({ user, onUserUpdate }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -225,6 +271,9 @@ export default function StudentDashboard({ user }) {
   const [courseDetail, setCourseDetail] = useState(null)
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState(null)
+  const [gradeSaving, setGradeSaving] = useState(null)
+  const [gradeError, setGradeError] = useState(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let mounted = true
@@ -244,7 +293,7 @@ export default function StudentDashboard({ user }) {
     }
     load()
     return () => { mounted = false }
-  }, [user?.id])
+  }, [user?.id, reloadKey])
 
   const summaryCards = useMemo(() => {
     if (!data) return []
@@ -297,6 +346,27 @@ export default function StudentDashboard({ user }) {
     setCourseError(null)
   }
 
+  const selectGrade = async (gradeNumber) => {
+    if (!gradeNumber || gradeSaving === gradeNumber) return
+    try {
+      setGradeSaving(gradeNumber)
+      setGradeError(null)
+      await api.updateProfile({ grado: gradeNumber })
+      if (typeof onUserUpdate === 'function') {
+        try {
+          await onUserUpdate()
+        } catch (e) {
+          // ignoramos errores silenciosamente
+        }
+      }
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      setGradeError(err.message || 'No se pudo actualizar el grado')
+    } finally {
+      setGradeSaving(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="dashboard-shell loading">
@@ -314,6 +384,18 @@ export default function StudentDashboard({ user }) {
   }
 
   if (!data) return null
+
+  if (data.requiresGradeSelection) {
+    return (
+      <GradeSelection
+        user={data.user || user}
+        options={data.availableGrades || []}
+        onSelect={selectGrade}
+        saving={gradeSaving}
+        error={gradeError}
+      />
+    )
+  }
 
   const attemptsLabel = formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite || 3 })
 

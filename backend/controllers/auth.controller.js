@@ -147,19 +147,18 @@ export const registerWithOtp = async (req, res, next) => {
     const exists = await Usuario.findOne({ email });
     if (exists) return res.status(409).json({ message: "Este correo ya está registrado" });
 
-    // ESTUDIANTE: no requiere OTP (y ya NO guardamos 'grado' aquí)
+    // ESTUDIANTE: no requiere OTP y ahora el grado puede elegirse luego
     if (role === "ESTUDIANTE") {
       const grade = normalizeGrade(req.body.grado ?? req.body.grade);
-      if (!grade) {
-        return res.status(400).json({ message: "Selecciona un grado válido (1, 2 o 3)" });
-      }
-      const user = await Usuario.create({
+      const payload = {
         nombre,
         email,
         password,          // se hashea en pre('save')
         rol: "ESTUDIANTE",
-        grado: grade,
-      });
+      };
+      if (grade) payload.grado = grade;
+
+      const user = await Usuario.create(payload);
       const fresh = await Usuario.findById(user._id).lean();
       const token = signToken(fresh || user);
       return res.status(201).json({ token, user: formatUser(fresh || user) });

@@ -16,6 +16,13 @@ const router = Router()
 
 const gradeNumberToCode = (n) => ({ 1: '1B', 2: '2B', 3: '3B' }[Number(n)] || null)
 const gradeNumberToLabel = (n) => ({ 1: '1ro. Básico', 2: '2do. Básico', 3: '3ro. Básico' }[Number(n)] || 'Sin grado')
+const buildGradeOptions = () =>
+  [1, 2, 3].map((number) => ({
+    number,
+    code: gradeNumberToCode(number),
+    label: gradeNumberToLabel(number),
+    description: `${gradeNumberToLabel(number)} · Plan oficial CNB`,
+  }))
 const unique = (arr) => [...new Set(arr.filter(Boolean))]
 
 const toObjectId = (value) => {
@@ -129,7 +136,21 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
     const gradeCode = gradeNumberToCode(user.grado)
-    if (!gradeCode) return res.status(400).json({ error: 'El estudiante no tiene grado asignado' })
+    if (!gradeCode) {
+      return res.json({
+        requiresGradeSelection: true,
+        availableGrades: buildGradeOptions(),
+        user: {
+          id: String(user._id),
+          nombre: user.nombre,
+          email: user.email,
+          grade: {
+            number: user.grado ?? null,
+            label: gradeNumberToLabel(user.grado),
+          },
+        },
+      })
+    }
 
     const planIndicators = await CNBIndicador.find({ grado: gradeCode }).lean()
     const totalPlan = planIndicators.length

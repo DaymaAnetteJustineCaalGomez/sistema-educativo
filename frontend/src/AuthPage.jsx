@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import StudentDashboard from './dashboards/StudentDashboard'
 import TeacherDashboard from './dashboards/TeacherDashboard'
@@ -103,6 +103,11 @@ export default function AuthPage(){
   const [toast, setToast] = useState({ show:false, msg:'' })
   const timerRef = useRef(null)
 
+  const refreshUser = useCallback(async () => {
+    const me = await api.me()
+    if (me?.user) setUser(normalizeUser(me.user))
+  }, [setUser])
+
   // helpers para limpiar formularios
   const resetLogin  = () => setLogin({ email:'', password:'' })
   const resetSignup = () => setSignup({ name:'', role:'', grade:'', email:'', p1:'', p2:'', code:'' })
@@ -155,16 +160,22 @@ export default function AuthPage(){
       }
     }
 
-    if (!tokenStore.get()) return
-    ;(async () => {
+    if (!tokenStore.get()) return undefined
+
+    let cancelled = false
+    const run = async () => {
       try {
-        const me = await api.me()
-        if (me?.user) setUser(normalizeUser(me.user))
+        await refreshUser()
       } catch {
         tokenStore.clear()
-        setUser(null)
+        if (!cancelled) setUser(null)
       }
-    })()
+    }
+    run()
+
+    return () => {
+      cancelled = true
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -183,13 +194,11 @@ export default function AuthPage(){
     e.preventDefault()
     if (signup.p1 !== signup.p2) return showToast('Las contraseñas no coinciden')
 
-    if (signup.role==='ESTUDIANTE' && !signup.grade) return showToast('Selecciona tu grado')
-
     const payload = { name: signup.name.trim(), email: signup.email.trim(), role: signup.role, password: signup.p1 }
     if (signup.role==='ESTUDIANTE') {
       const gradeNumber = parseGradeNumber(signup.grade)
       if (gradeNumber) payload.grado = gradeNumber
-      payload.grade = signup.grade
+      if (signup.grade) payload.grade = signup.grade
     }
     if (signup.role==='DOCENTE' || signup.role==='ADMIN') {
       if (!signup.code.trim()) return showToast('Ingresa el código de verificación')
@@ -278,6 +287,16 @@ export default function AuthPage(){
     } finally {
       setResetLoading(false)
     }
+  }
+
+  const roleUpper = (user?.role || '').toUpperCase()
+  let dashboardView = <EmptyDashboard role={user?.role} />
+  if (roleUpper === 'ESTUDIANTE') {
+    dashboardView = <StudentDashboard user={user} onUserUpdate={refreshUser} />
+  } else if (roleUpper === 'DOCENTE') {
+    dashboardView = <TeacherDashboard user={user} />
+  } else if (roleUpper === 'ADMIN') {
+    dashboardView = <AdminDashboard user={user} />
   }
 
   return (
@@ -380,9 +399,14 @@ export default function AuthPage(){
 
                 {signup.role==='ESTUDIANTE' && (
                   <div>
-                    <label className="field" htmlFor="grade">Grado</label>
-                    <select className="input" id="grade" required value={signup.grade} onChange={e=>setSignup(v=>({...v, grade:e.target.value}))}>
-                      <option value="" disabled>Selecciona tu grado</option>
+                    <label className="field" htmlFor="grade">Grado (puedes elegirlo luego)</label>
+                    <select
+                      className="input"
+                      id="grade"
+                      value={signup.grade}
+                      onChange={e=>setSignup(v=>({...v, grade:e.target.value}))}
+                    >
+                      <option value="">Lo elegiré después</option>
                       <option value="1ro. Básico">1ro. Básico</option>
                       <option value="2do. Básico">2do. Básico</option>
                       <option value="3ro. Básico">3ro. Básico</option>
@@ -459,21 +483,13 @@ export default function AuthPage(){
             </div>
             <button className="btn-secondary" onClick={onLogout} type="button">Cerrar sesión</button>
           </div>
-          {renderDashboard(user)}
+          {dashboardView}
         </div>
       )}
 
       <Toast show={toast.show} msg={toast.msg} />
     </div>
   )
-}
-
-function renderDashboard(user){
-  const role = (user?.role || '').toUpperCase()
-  if (role==='ESTUDIANTE') return <StudentDashboard user={user} />
-  if (role==='DOCENTE')    return <TeacherDashboard user={user} />
-  if (role==='ADMIN')      return <AdminDashboard user={user} />
-  return <EmptyDashboard role={user?.role} />
 }
 
 function EmptyDashboard({ role }) {
