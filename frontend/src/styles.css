@@ -1243,6 +1243,11 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   font-size: 1.2rem;
 }
 
+.hero-chip small {
+  font-size: 0.78rem;
+  color: rgba(203, 213, 255, 0.6);
+}
+
 .hero-metrics {
   margin-top: 2rem;
   display: grid;
@@ -1262,6 +1267,11 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 .stat-card.tone-accent {
   background: linear-gradient(135deg, rgba(124, 85, 255, 0.3), rgba(48, 198, 255, 0.28));
   border-color: rgba(162, 178, 255, 0.5);
+}
+
+.stat-card.tone-soft {
+  background: rgba(18, 24, 62, 0.6);
+  border-color: rgba(116, 128, 255, 0.2);
 }
 
 .stat-title {
@@ -1607,7 +1617,8 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   gap: 1.6rem;
 }
 
-.course-summary {
+.course-summary,
+.course-overview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1rem;
@@ -1617,12 +1628,14 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   border: 1px solid rgba(124, 138, 255, 0.18);
 }
 
-.course-summary div {
+.course-summary div,
+.course-overview div {
   display: grid;
   gap: 0.2rem;
 }
 
-.competence-list {
+.competence-list,
+.competence-stack {
   display: grid;
   gap: 1.2rem;
 }
@@ -1636,14 +1649,16 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   gap: 1rem;
 }
 
-.competence-card header {
+.competence-card header,
+.competence-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
 }
 
-.indicator-card {
+.indicator-card,
+.indicator-panel {
   background: rgba(12, 18, 48, 0.6);
   border-radius: 18px;
   border: 1px solid rgba(110, 124, 255, 0.18);
@@ -1652,7 +1667,8 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   gap: 0.8rem;
 }
 
-.indicator-header {
+.indicator-header,
+.indicator-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1666,12 +1682,14 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 }
 
 .indicator-content h4,
+.indicator-contents h4,
 .indicator-resources h4 {
   margin: 0 0 0.5rem;
   font-size: 0.95rem;
 }
 
 .indicator-content ul,
+.indicator-contents ul,
 .indicator-resources ul {
   margin: 0;
   padding-left: 1.1rem;
@@ -1698,6 +1716,52 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 .indicator-resources li a {
   color: inherit;
   text-decoration: none;
+}
+
+.indicator-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.resource-groups {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.resource-group {
+  background: rgba(10, 16, 44, 0.55);
+  border-radius: 14px;
+  border: 1px solid rgba(92, 108, 255, 0.16);
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.resource-group h5 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(210, 220, 255, 0.9);
+}
+
+.resource-group .resource-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.course-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.course-card-tags .badge {
+  background: rgba(20, 27, 66, 0.7);
+  border: 1px solid rgba(112, 128, 255, 0.24);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
 }
 
 .empty-state {
@@ -1769,7 +1833,8 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
 }
 
 .role-grid,
-.metric-grid {
+.metric-grid,
+.metric-board {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
@@ -1783,6 +1848,80 @@ label.field{ font-size: 11.5px; }           /* antes 12px */
   padding: 1rem 1.1rem;
   display: grid;
   gap: 0.35rem;
+}
+
+.catalog-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.catalog-summary-cards div {
+  background: rgba(15, 22, 56, 0.6);
+  border: 1px solid rgba(122, 136, 255, 0.18);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.catalog-area-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.2rem;
+}
+
+.catalog-area-card {
+  background: rgba(12, 18, 48, 0.65);
+  border: 1px solid rgba(110, 126, 255, 0.18);
+  border-radius: 20px;
+  padding: 1.2rem 1.4rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.catalog-area-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.catalog-area-card header h4 {
+  margin: 0;
+}
+
+.catalog-area-card p {
+  margin: 0;
+  color: rgba(206, 214, 255, 0.78);
+  font-size: 0.9rem;
+}
+
+.catalog-area-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.catalog-area-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.catalog-area-card ul li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10, 16, 44, 0.55);
+  border: 1px solid rgba(96, 110, 255, 0.18);
+  border-radius: 14px;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.85rem;
+  color: rgba(210, 220, 255, 0.85);
 }
 
 .change-history {

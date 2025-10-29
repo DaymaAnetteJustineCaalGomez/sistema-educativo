@@ -1,37 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import DashboardLayout, { SectionCard, StatCard, EmptyState } from './DashboardLayout'
 import { api } from '../api'
-import {
-  formatDuration,
-  formatPercent,
-  formatNumber,
-  formatShortDate,
-  weekdayLabel,
-} from './utils'
-
-function UsageSpark({ usage }) {
-  const sessions = Array.isArray(usage?.sessions) ? usage.sessions : []
-  if (!sessions.length) {
-    return <span className="muted">Sin sesiones registradas.</span>
-  }
-  const maxSeconds = Math.max(...sessions.map((s) => Number(s.seconds) || 0), 1)
-  return (
-    <div className="usage-spark compact">
-      {sessions.map((session) => (
-        <div key={session.date} className="usage-spark-row">
-          <span className="usage-day">{weekdayLabel(session.date)}</span>
-          <div className="usage-meter">
-            <div
-              className="usage-meter-fill"
-              style={{ width: `${Math.min(100, (session.seconds / maxSeconds) * 100)}%` }}
-            />
-          </div>
-          <span className="usage-time">{formatDuration(session.seconds)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+import { formatPercent, formatNumber, formatShortDate } from './utils'
 
 function WeakTopicList({ items }) {
   if (!items.length) {
@@ -295,25 +265,10 @@ export default function TeacherDashboard({ user }) {
 
       <SectionCard
         id="teacher-focus"
-        title="Focos débiles y uso"
-        description="Indicadores con menor desempeño y tiempo acumulado en la plataforma."
+        title="Focos débiles del CNB"
+        description="Indicadores que requieren refuerzo según el progreso de tus estudiantes."
       >
-        <div className="teacher-focus-grid">
-          <div className="focus-list">
-            <WeakTopicList items={weakTopics} />
-          </div>
-          <aside className="focus-usage">
-            <header>
-              <strong>Tiempo de uso</strong>
-              <span className="muted">Últimos 7 días</span>
-            </header>
-            <div className="usage-summary">
-              <strong>{formatDuration(data.usage?.totalSeconds)}</strong>
-              <span className="muted">{data.usage?.sessions?.length || 0} sesiones registradas</span>
-            </div>
-            <UsageSpark usage={data.usage || { sessions: [] }} />
-          </aside>
-        </div>
+        <WeakTopicList items={weakTopics} />
       </SectionCard>
 
       <SectionCard

@@ -1,42 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import DashboardLayout, { SectionCard, StatCard, EmptyState } from './DashboardLayout'
 import { api } from '../api'
-import {
-  formatDuration,
-  formatPercent,
-  formatNumber,
-  formatShortDate,
-  weekdayLabel,
-  formatAttempts,
-} from './utils'
-
-function UsageSpark({ usage }) {
-  const sessions = Array.isArray(usage?.sessions) ? usage.sessions : []
-  if (!sessions.length) {
-    return (
-      <div className="usage-empty">
-        <span className="muted">Sin sesiones registradas.</span>
-      </div>
-    )
-  }
-  const maxSeconds = Math.max(...sessions.map((s) => Number(s.seconds) || 0), 1)
-  return (
-    <div className="usage-spark">
-      {sessions.map((session) => (
-        <div key={session.date} className="usage-spark-row">
-          <span className="usage-day">{weekdayLabel(session.date)}</span>
-          <div className="usage-meter">
-            <div
-              className="usage-meter-fill"
-              style={{ width: `${Math.min(100, (session.seconds / maxSeconds) * 100)}%` }}
-            />
-          </div>
-          <span className="usage-time">{formatDuration(session.seconds)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+import { formatPercent, formatNumber, formatShortDate, formatAttempts } from './utils'
 
 function RecommendationList({ items }) {
   if (!items.length) {
@@ -170,7 +135,15 @@ function CourseGrid({ courses, onSelect }) {
           </div>
           <div className="course-card-body">
             <span>{course.completados} de {course.totalIndicadores} indicadores</span>
-            {typeof course.promedio === 'number' ? <span className="muted">Promedio {course.promedio} pts</span> : null}
+            <div className="course-card-tags">
+              <span className="badge muted">Pendientes {formatNumber(course.pendientes)}</span>
+              {typeof course.enProgreso === 'number' ? (
+                <span className="badge neutral">En progreso {formatNumber(course.enProgreso)}</span>
+              ) : null}
+              {typeof course.promedio === 'number' ? (
+                <span className="badge info">{course.promedio} pts</span>
+              ) : null}
+            </div>
           </div>
           {course.siguiente ? (
             <div className="course-card-footer">
@@ -188,6 +161,44 @@ function CourseGrid({ courses, onSelect }) {
   )
 }
 
+const RESOURCE_GROUPS = [
+  { key: 'videos', title: 'Videos', matcher: (type) => type.includes('video') },
+  {
+    key: 'ejercicios',
+    title: 'Ejercicios y práctica',
+    matcher: (type) => type.includes('ejercicio') || type.includes('quiz') || type.includes('evaluación') || type.includes('práctica') || type.includes('practica'),
+  },
+  { key: 'contenidos', title: 'Lecturas y recursos complementarios', matcher: () => true },
+]
+
+function normalizeContenido(item) {
+  if (!item) return null
+  if (typeof item === 'string') return item
+  const { codigo, titulo } = item
+  if (codigo && titulo) return `${codigo} · ${titulo}`
+  return codigo || titulo || null
+}
+
+function groupResources(resources = []) {
+  const buckets = RESOURCE_GROUPS.map((group) => ({ ...group, items: [] }))
+  resources.forEach((resource) => {
+    const type = (resource?.tipo || '').toLowerCase()
+    const target = buckets.find((group) => group.matcher(type)) || buckets[buckets.length - 1]
+    target.items.push(resource)
+  })
+  // Evita duplicar recursos en los grupos siguientes
+  const seen = new Set()
+  return buckets.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      const key = String(item._id || `${item.titulo}-${item.url}`)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }),
+  }))
+}
+
 function CourseDetailModal({ course, detail, loading, error, onClose }) {
   if (!course) return null
   const resumen = detail?.resumen || {
@@ -197,6 +208,8 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
     promedio: null,
   }
   const competencias = Array.isArray(detail?.competencias) ? detail.competencias : []
+  const gradeLabel = detail?.grade?.label
+
   return (
     <div className="course-modal" role="dialog" aria-modal="true">
       <div className="course-modal__overlay" onClick={onClose} />
@@ -204,7 +217,7 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
         <header className="course-modal__header">
           <div>
             <h3>{course.titulo}</h3>
-            {detail?.grade?.label ? <span className="muted">{detail.grade.label}</span> : null}
+            {gradeLabel ? <span className="muted">{gradeLabel}</span> : null}
           </div>
           <button type="button" className="ghost-btn" onClick={onClose}>
             Cerrar
@@ -217,7 +230,7 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
             <EmptyState title="No se pudo cargar el área" description={error} />
           ) : competencias.length ? (
             <>
-              <div className="course-summary">
+              <div className="course-overview">
                 <div>
                   <span className="card-label">Indicadores</span>
                   <strong>{resumen.totalIndicadores}</strong>
@@ -237,73 +250,90 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
                   </strong>
                 </div>
               </div>
-              <div className="competence-list">
+              <div className="competence-stack">
                 {competencias.map((comp) => {
                   const indicadores = Array.isArray(comp.indicadores) ? comp.indicadores : []
                   return (
                     <article key={comp.id || comp.codigo} className="competence-card">
-                      <header>
+                      <header className="competence-header">
                         <div>
                           <span className="pill neutral">{comp.codigo || 'Competencia'}</span>
                           <strong>{comp.enunciado}</strong>
                         </div>
                         <span className="badge info">{formatPercent(comp.progreso)}</span>
                       </header>
-                      {indicadores.map((ind) => {
-                        const contenidos = Array.isArray(ind.contenidos) ? ind.contenidos : []
-                        const recursos = Array.isArray(ind.recursos) ? ind.recursos : []
-                        return (
-                          <div key={ind.id || ind.codigo} className="indicator-card">
-                            <div className="indicator-header">
-                              <strong>{ind.codigo}</strong>
-                              <div className="indicator-tags">
-                                <span
-                                  className={`badge ${
-                                    ind.estado === 'completado'
-                                      ? 'success'
-                                      : ind.estado === 'en_progreso'
-                                      ? 'warning'
-                                      : 'muted'
-                                  }`}
-                                >
-                                  {(ind.estado || 'pendiente').replace('_', ' ')}
-                                </span>
-                                {typeof ind.puntuacion === 'number' ? (
-                                  <span className="badge info">{ind.puntuacion} pts</span>
-                                ) : null}
+                      <div className="indicator-grid">
+                        {indicadores.map((ind) => {
+                          const contenidos = (Array.isArray(ind.contenidos) ? ind.contenidos : [])
+                            .map((item) => normalizeContenido(item))
+                            .filter(Boolean)
+                          const recursos = Array.isArray(ind.recursos) ? ind.recursos : []
+                          const grouped = groupResources(recursos)
+                          return (
+                            <div key={ind.id || ind.codigo} className="indicator-panel">
+                              <div className="indicator-head">
+                                <div>
+                                  <strong>{ind.codigo}</strong>
+                                  {ind.descripcion ? <p className="muted">{ind.descripcion}</p> : null}
+                                </div>
+                                <div className="indicator-tags">
+                                  <span
+                                    className={`badge ${
+                                      ind.estado === 'completado'
+                                        ? 'success'
+                                        : ind.estado === 'en_progreso'
+                                        ? 'warning'
+                                        : 'muted'
+                                    }`}
+                                  >
+                                    {(ind.estado || 'pendiente').replace('_', ' ')}
+                                  </span>
+                                  {typeof ind.puntuacion === 'number' ? (
+                                    <span className="badge info">{ind.puntuacion} pts</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                              {contenidos.length ? (
+                                <div className="indicator-contents">
+                                  <h4>Temas y subtemas del CNB</h4>
+                                  <ul>
+                                    {contenidos.map((contenido, idx) => (
+                                      <li key={idx}>{contenido}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                              <div className="indicator-resources">
+                                <h4>Recursos asociados</h4>
+                                <div className="resource-groups">
+                                  {grouped.map((group) => (
+                                    <div key={group.key} className="resource-group">
+                                      <h5>{group.title}</h5>
+                                      {group.items.length ? (
+                                        <ul className="resource-list">
+                                          {group.items.map((resource) => (
+                                            <li key={resource._id || resource.url}>
+                                              <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                                                <strong>{resource.titulo}</strong>
+                                                <span>
+                                                  {resource.tipo}
+                                                  {resource.proveedor ? ` · ${resource.proveedor}` : ''}
+                                                </span>
+                                              </a>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <p className="muted">No hay recursos disponibles en esta categoría.</p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
-                            {ind.descripcion ? <p className="muted">{ind.descripcion}</p> : null}
-                            {contenidos.length ? (
-                              <div className="indicator-content">
-                                <h4>Contenidos del CNB</h4>
-                                <ul>
-                                  {contenidos.map((contenido, idx) => (
-                                    <li key={idx}>{contenido}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : null}
-                            <div className="indicator-resources">
-                              <h4>Recursos recomendados</h4>
-                              {recursos.length ? (
-                                <ul>
-                                  {recursos.map((recurso) => (
-                                    <li key={recurso._id}>
-                                      <a href={recurso.url} target="_blank" rel="noopener noreferrer">
-                                        <strong>{recurso.titulo}</strong>
-                                        <span>{recurso.tipo}{recurso.proveedor ? ` · ${recurso.proveedor}` : ''}</span>
-                                      </a>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="muted">Aún no hay recursos cargados para este indicador.</p>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </article>
                   )
                 })}
@@ -419,6 +449,14 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const summaryCards = useMemo(() => {
     if (!data || data.requiresGradeSelection) return []
     const summary = data.summary || {}
+    const pendientes =
+      typeof summary.indicadoresPendientes === 'number'
+        ? summary.indicadoresPendientes
+        : Math.max((summary.tareasTotales || 0) - (summary.tareasCompletadas || 0), 0)
+    const recomendacionesActivas =
+      typeof summary.recomendacionesActivas === 'number'
+        ? summary.recomendacionesActivas
+        : (Array.isArray(data?.recomendaciones) ? data.recomendaciones.length : 0)
     return [
       {
         title: 'Promedio general',
@@ -435,14 +473,15 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         subtitle: `${summary.tareasCompletadas || 0} de ${summary.tareasTotales || 0} indicadores`,
       },
       {
-        title: 'Tareas completadas',
-        value: formatNumber(summary.tareasCompletadas),
-        subtitle: 'Indicadores finalizados',
+        title: 'Indicadores pendientes',
+        value: formatNumber(pendientes),
+        subtitle: 'Por completar en tu plan',
       },
       {
-        title: 'Tiempo de uso',
-        value: formatDuration(summary.tiempoUsoSegundos),
-        subtitle: `Racha actual: ${data.usage?.streak || 0} días`,
+        title: 'Recomendaciones activas',
+        value: formatNumber(recomendacionesActivas),
+        subtitle: 'Sugerencias personalizadas',
+        tone: 'soft',
       },
     ]
   }, [data])
@@ -453,9 +492,10 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       { id: 'student-overview', label: 'Resumen' },
       { id: 'student-courses', label: 'Cursos CNB', badge: courses.length },
       { id: 'student-recommendations', label: 'Recomendaciones', badge: recommendations.length },
-      { id: 'student-activity', label: 'Actividad', badge: historyItems.length },
+      { id: 'student-history', label: 'Historial', badge: historyItems.length },
+      { id: 'student-notifications', label: 'Notificaciones', badge: notifications.length },
     ]
-  }, [data, courses, recommendations, historyItems])
+  }, [data, courses, recommendations, historyItems, notifications])
 
   const openCourse = async (course) => {
     setSelectedCourse(course)
@@ -535,6 +575,28 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   }
 
   const attemptsLabel = formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite || 3 })
+  const summary = data.summary || {}
+  const recomendacionesActivas =
+    typeof summary.recomendacionesActivas === 'number'
+      ? summary.recomendacionesActivas
+      : recommendations.length
+  const heroChips = [
+    {
+      label: 'Intentos disponibles',
+      value: attemptsLabel,
+      sub: `Máximo permitido: ${data.intentos?.limite || 3}`,
+    },
+    {
+      label: 'Recomendaciones',
+      value: formatNumber(recomendacionesActivas),
+      sub: 'Contenido sugerido para tu avance',
+    },
+    {
+      label: 'Notificaciones',
+      value: formatNumber(summary.notificacionesNoLeidas),
+      sub: 'Pendientes de revisar',
+    },
+  ]
 
   const hero = (
     <section id="student-overview" className="hero-section student-hero">
@@ -542,19 +604,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         <div>
           <span className="hero-eyebrow">Panel estudiantil</span>
           <h2>Hola {data.user?.nombre || user?.name || user?.email}</h2>
-          <p>Revisa tu avance del grado {data.user?.grade?.label || ''} y continúa con tus cursos del CNB.</p>
+          <p>
+            Revisa tu avance del grado {data.user?.grade?.label || ''} y explora las áreas oficiales del CNB con
+            contenidos, videos y ejercicios alineados a tu nivel.
+          </p>
         </div>
         <div className="hero-side">
-          <div className="hero-chip">
-            <span>Intentos</span>
-            <strong>{attemptsLabel}</strong>
-            <small>Máximo permitido: {data.intentos?.limite || 3}</small>
-          </div>
-          <div className="hero-chip">
-            <span>Notificaciones</span>
-            <strong>{formatNumber(data.summary?.notificacionesNoLeidas)}</strong>
-            <small>Pendientes de revisar</small>
-          </div>
+          {heroChips.map((chip) => (
+            <div key={chip.label} className="hero-chip">
+              <span>{chip.label}</span>
+              <strong>{chip.value}</strong>
+              {chip.sub ? <small>{chip.sub}</small> : null}
+            </div>
+          ))}
         </div>
       </div>
       <div className="hero-metrics">
@@ -585,36 +647,19 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         </SectionCard>
 
         <SectionCard
-          id="student-activity"
-          title="Actividad reciente y seguimiento"
-          description="Consulta tu historial, tiempo de uso y notificaciones en un solo lugar."
+          id="student-history"
+          title="Historial de actividad"
+          description="Tus últimos intentos, logros y avances registrados."
         >
-          <div className="activity-grid">
-            <div className="activity-main">
-              <h4>Historial de actividades</h4>
-              <HistoryTimeline items={historyItems} />
-            </div>
-            <aside className="activity-side">
-              <div className="usage-widget">
-                <header>
-                  <strong>Tiempo de uso</strong>
-                  <span className="muted">Racha de {data.usage?.streak || 0} días</span>
-                </header>
-                <div className="usage-summary">
-                  <strong>{formatDuration(data.summary?.tiempoUsoSegundos)}</strong>
-                  <span className="muted">{data.usage?.sessions?.length || 0} sesiones recientes</span>
-                </div>
-                <UsageSpark usage={data.usage} />
-              </div>
-              <div className="notifications-widget">
-                <header>
-                  <strong>Notificaciones</strong>
-                  <span className="muted">Correos y alertas enviadas</span>
-                </header>
-                <NotificationFeed items={notifications} />
-              </div>
-            </aside>
-          </div>
+          <HistoryTimeline items={historyItems} />
+        </SectionCard>
+
+        <SectionCard
+          id="student-notifications"
+          title="Notificaciones y recordatorios"
+          description="Mensajes enviados a tu correo y dentro de la plataforma."
+        >
+          <NotificationFeed items={notifications} />
         </SectionCard>
       </DashboardLayout>
 

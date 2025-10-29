@@ -226,8 +226,6 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
       .sort({ createdAt: -1 })
       .limit(200)
       .lean()
-    const usage = computeUsageFromAttempts(attempts, 7)
-
     const notifications = await Notificacion.find({ usuarioId: userId })
       .sort({ fecha: -1 })
       .limit(10)
@@ -293,6 +291,9 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
 
     const history = buildHistoryFromAttempts(attempts, indicatorMap)
 
+    const recomendacionesActivas = recommendationsEnriched.length
+    const indicadoresPendientes = totalPlan > completados ? totalPlan - completados : 0
+
     res.json({
       user: {
         id: String(userId),
@@ -309,11 +310,11 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
         progresoTotal,
         tareasCompletadas: completados,
         tareasTotales: totalPlan,
-        tiempoUsoSegundos: usage.totalSeconds,
+        indicadoresPendientes,
+        recomendacionesActivas,
         notificacionesNoLeidas: notifications.filter((n) => !n.leida).length,
       },
       cursos: courses,
-      usage,
       recomendaciones: recommendationsEnriched,
       historial: history,
       notificaciones: notifications,
@@ -691,33 +692,75 @@ router.get('/admin', authRequired, allowRoles('ADMIN'), async (req, res, next) =
       .lean()
     const progressIndicators = await ProgresoIndicador.find({ usuarioId: { $in: [...studentIds, ...studentIds.map((id) => String(id))] } }).lean()
 
-    const gradeCodes = unique(students.map((s) => gradeNumberToCode(s.grado)))
-    const planCounts = {}
-    for (const code of gradeCodes) {
-      planCounts[code] = await CNBIndicador.countDocuments({ grado: code })
+    const [areaDocs, competenciaDocs, indicadorDocs] = await Promise.all([
+      CNBArea.find().sort({ nombre: 1 }).lean(),
+      CNBCompetencia.find().lean(),
+      CNBIndicador.find().lean(),
+    ])
+
+    const planCounts = indicadorDocs.reduce((acc, indicador) => {
+      if (indicador.grado) {
+        acc[indicador.grado] = (acc[indicador.grado] || 0) + 1
+      }
+      return acc
+    }, {})
+
+    const competenciasPorArea = competenciaDocs.reduce((acc, competencia) => {
+      const key = String(competencia.areaId)
+      acc.set(key, (acc.get(key) || 0) + 1)
+      return acc
+    }, new Map())
+
+    const indicadoresPorArea = indicadorDocs.reduce((acc, indicador) => {
+      const key = String(indicador.areaId)
+      if (!acc.has(key)) {
+        acc.set(key, { total: 0, porGrado: {} })
+      }
+      const bucket = acc.get(key)
+      bucket.total += 1
+      if (indicador.grado) {
+        bucket.porGrado[indicador.grado] = (bucket.porGrado[indicador.grado] || 0) + 1
+      }
+      return acc
+    }, new Map())
+
+    const catalogAreas = areaDocs.map((area) => {
+      const key = String(area._id)
+      const compCount = competenciasPorArea.get(key) || 0
+      const indicadorInfo = indicadoresPorArea.get(key) || { total: 0, porGrado: {} }
+      return {
+        id: key,
+        nombre: area.nombre,
+        descripcion: area.descripcion || '',
+        slug: area.slug || '',
+        competencias: compCount,
+        indicadores: indicadorInfo.total,
+        indicadoresPorGrado: indicadorInfo.porGrado,
+      }
+    })
+
+    const cnbCatalog = {
+      resumen: {
+        totalAreas: areaDocs.length,
+        totalCompetencias: competenciaDocs.length,
+        totalIndicadores: indicadorDocs.length,
+      },
+      areas: catalogAreas,
     }
 
     let totalCompletados = 0
     let totalScoreSum = 0
     let totalScoreCount = 0
-    const indicatorIds = new Set()
     for (const prog of progress) {
       if (prog.estado === 'completado') totalCompletados += 1
       if (typeof prog.puntuacion === 'number') {
         totalScoreSum += prog.puntuacion
         totalScoreCount += 1
       }
-      indicatorIds.add(String(prog.indicadorId))
     }
-
-    const indicatorDocs = indicatorIds.size
-      ? await CNBIndicador.find({ _id: { $in: Array.from(indicatorIds) } }).lean()
-      : []
-    const indicatorMap = new Map(indicatorDocs.map((ind) => [String(ind._id), ind]))
 
     const attemptsCount = attempts.length
     const abandonados = attempts.filter((a) => a.estado === 'abandonado').length
-    const totalSeconds = attempts.reduce((acc, at) => acc + durationFromAttempt(at), 0)
 
     const totalPlan = students.reduce((acc, student) => {
       const code = gradeNumberToCode(student.grado)
@@ -741,8 +784,6 @@ router.get('/admin', authRequired, allowRoles('ADMIN'), async (req, res, next) =
 
     const intentosRegistrados = progressIndicators.reduce((acc, p) => acc + (p.intentosTotales || 0), 0)
 
-    const usage = computeUsageFromAttempts(attempts, 7)
-
     const recommendationHistory = notifications.slice(0, 50).map((notif) => ({
       id: String(notif._id),
       fecha: notif.fecha || notif.createdAt,
@@ -765,14 +806,12 @@ router.get('/admin', authRequired, allowRoles('ADMIN'), async (req, res, next) =
       }))
 
     const sessionsPerStudent = students.length ? attemptsCount / students.length : 0
-    const avgSessionSeconds = attemptsCount ? totalSeconds / attemptsCount : 0
 
     res.json({
       summary: {
         usuariosTotales: users.length,
         progresoPromedio,
         intentosRegistrados,
-        tiempoTotalSegundos: totalSeconds,
         promedioGeneral,
         cobertura: safePercent(totalCompletados, totalPlan),
         abandono: attemptsCount ? +((abandonados / attemptsCount) * 100).toFixed(2) : 0,
@@ -781,14 +820,13 @@ router.get('/admin', authRequired, allowRoles('ADMIN'), async (req, res, next) =
       globalMetrics: {
         tareasCompletadas: totalCompletados,
         recomendacionesActivas: notifications.filter((n) => !n.leida).length,
-        tiempoPromedioSesionSegundos: Math.round(avgSessionSeconds),
         intentosPromedioPorEstudiante: +sessionsPerStudent.toFixed(2),
       },
       histories: {
         recomendaciones: recommendationHistory,
         cambios: changesHistory,
       },
-      usage,
+      cnbCatalog,
     })
   } catch (err) {
     next(err)

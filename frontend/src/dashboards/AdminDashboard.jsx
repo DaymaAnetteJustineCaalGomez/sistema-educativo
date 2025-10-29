@@ -1,37 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import DashboardLayout, { SectionCard, StatCard, EmptyState } from './DashboardLayout'
 import { api } from '../api'
-import {
-  formatDuration,
-  formatPercent,
-  formatNumber,
-  formatShortDate,
-  weekdayLabel,
-} from './utils'
-
-function UsageSpark({ usage }) {
-  const sessions = Array.isArray(usage?.sessions) ? usage.sessions : []
-  if (!sessions.length) {
-    return <span className="muted">Sin sesiones registradas.</span>
-  }
-  const maxSeconds = Math.max(...sessions.map((s) => Number(s.seconds) || 0), 1)
-  return (
-    <div className="usage-spark compact">
-      {sessions.map((session) => (
-        <div key={session.date} className="usage-spark-row">
-          <span className="usage-day">{weekdayLabel(session.date)}</span>
-          <div className="usage-meter">
-            <div
-              className="usage-meter-fill"
-              style={{ width: `${Math.min(100, (session.seconds / maxSeconds) * 100)}%` }}
-            />
-          </div>
-          <span className="usage-time">{formatDuration(session.seconds)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+import { formatPercent, formatNumber, formatShortDate } from './utils'
 
 function RoleGrid({ roles }) {
   const items = [
@@ -51,21 +21,85 @@ function RoleGrid({ roles }) {
   )
 }
 
-function MetricGrid({ metrics }) {
+function MetricBoard({ metrics, extra }) {
   const items = [
     { label: 'Tareas completadas', value: formatNumber(metrics?.tareasCompletadas) },
     { label: 'Recomendaciones activas', value: formatNumber(metrics?.recomendacionesActivas) },
-    { label: 'Tiempo promedio por sesión', value: formatDuration(metrics?.tiempoPromedioSesionSegundos) },
     { label: 'Intentos promedio por estudiante', value: formatNumber(metrics?.intentosPromedioPorEstudiante) },
   ]
+  if (extra) items.push(extra)
   return (
-    <div className="metric-grid">
+    <div className="metric-board">
       {items.map((item) => (
         <div key={item.label} className="metric-card">
           <span className="muted">{item.label}</span>
           <strong>{item.value}</strong>
         </div>
       ))}
+    </div>
+  )
+}
+
+const gradeLabels = { 1: '1ro. Básico', 2: '2do. Básico', 3: '3ro. Básico' }
+const gradeCodes = { '1B': '1ro. Básico', '2B': '2do. Básico', '3B': '3ro. Básico' }
+
+function CatalogSummary({ resumen }) {
+  const items = [
+    { label: 'Áreas CNB', value: formatNumber(resumen?.totalAreas) },
+    { label: 'Competencias', value: formatNumber(resumen?.totalCompetencias) },
+    { label: 'Indicadores', value: formatNumber(resumen?.totalIndicadores) },
+  ]
+  return (
+    <div className="catalog-summary-cards">
+      {items.map((item) => (
+        <div key={item.label}>
+          <span className="muted">{item.label}</span>
+          <strong>{item.value}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CatalogAreaList({ areas }) {
+  if (!areas.length) {
+    return (
+      <EmptyState
+        title="Catálogo sin áreas"
+        description="Carga las áreas del CNB para visualizar competencias e indicadores por grado."
+      />
+    )
+  }
+  return (
+    <div className="catalog-area-grid">
+      {areas.map((area) => {
+        const gradeEntries = Object.entries(area.indicadoresPorGrado || {})
+        return (
+          <article key={area.id} className="catalog-area-card">
+            <header>
+              <h4>{area.nombre}</h4>
+              <span className="muted">{formatNumber(area.indicadores)} indicadores</span>
+            </header>
+            {area.descripcion ? <p>{area.descripcion}</p> : null}
+            <div className="catalog-area-meta">
+              <span className="badge neutral">{formatNumber(area.competencias)} competencias</span>
+              <span className="badge info">{formatNumber(area.indicadores)} indicadores</span>
+            </div>
+            <ul>
+              {gradeEntries.length ? (
+                gradeEntries.map(([code, count]) => (
+                  <li key={code}>
+                    <span>{gradeCodes[code] || gradeLabels[code] || code}</span>
+                    <strong>{formatNumber(count)}</strong>
+                  </li>
+                ))
+              ) : (
+                <li className="muted">Sin indicadores asignados por grado</li>
+              )}
+            </ul>
+          </article>
+        )
+      })}
     </div>
   )
 }
@@ -156,6 +190,11 @@ export default function AdminDashboard({ user }) {
 
   const recommendationHistory = useMemo(() => data?.histories?.recomendaciones || [], [data])
   const changeHistory = useMemo(() => data?.histories?.cambios || [], [data])
+  const catalogAreas = useMemo(
+    () => (Array.isArray(data?.cnbCatalog?.areas) ? data.cnbCatalog.areas : []),
+    [data],
+  )
+  const catalogSummary = data?.cnbCatalog?.resumen || {}
 
   const summaryMetrics = useMemo(() => {
     if (!data) return []
@@ -178,9 +217,9 @@ export default function AdminDashboard({ user }) {
         subtitle: 'Intentos acumulados',
       },
       {
-        title: 'Tiempo total',
-        value: formatDuration(summary.tiempoTotalSegundos),
-        subtitle: 'Uso global de la aplicación',
+        title: 'Cobertura global',
+        value: formatPercent(summary.cobertura),
+        subtitle: 'Indicadores completados',
       },
     ]
   }, [data])
@@ -189,11 +228,12 @@ export default function AdminDashboard({ user }) {
     if (!data) return []
     return [
       { id: 'admin-overview', label: 'Resumen' },
-      { id: 'admin-roles', label: 'Roles y catálogo' },
+      { id: 'admin-roles', label: 'Usuarios y roles' },
+      { id: 'admin-catalog', label: 'Catálogo CNB', badge: catalogAreas.length },
       { id: 'admin-metrics', label: 'Métricas globales' },
       { id: 'admin-activity', label: 'Actividad', badge: recommendationHistory.length + changeHistory.length },
     ]
-  }, [data, recommendationHistory, changeHistory])
+  }, [data, catalogAreas, recommendationHistory, changeHistory])
 
   if (loading) {
     return (
@@ -255,23 +295,23 @@ export default function AdminDashboard({ user }) {
       </SectionCard>
 
       <SectionCard
+        id="admin-catalog"
+        title="Catálogo CNB"
+        description="Áreas, competencias e indicadores disponibles para los grados básicos."
+      >
+        <CatalogSummary resumen={catalogSummary} />
+        <CatalogAreaList areas={catalogAreas} />
+      </SectionCard>
+
+      <SectionCard
         id="admin-metrics"
         title="Métricas globales"
         description="Indicadores generales del sistema educativo digital."
       >
-        <MetricGrid metrics={data.globalMetrics || {}} />
-      </SectionCard>
-
-      <SectionCard
-        id="admin-usage"
-        title="Uso de la plataforma"
-        description="Sesiones registradas y tiempo acumulado en la última semana."
-      >
-        <div className="usage-summary">
-          <strong>{formatDuration(data.usage?.totalSeconds)}</strong>
-          <span className="muted">{data.usage?.sessions?.length || 0} sesiones recientes</span>
-        </div>
-        <UsageSpark usage={data.usage || { sessions: [] }} />
+        <MetricBoard
+          metrics={data.globalMetrics || {}}
+          extra={{ label: 'Indicadores en catálogo', value: formatNumber(catalogSummary.totalIndicadores) }}
+        />
       </SectionCard>
 
       <SectionCard
