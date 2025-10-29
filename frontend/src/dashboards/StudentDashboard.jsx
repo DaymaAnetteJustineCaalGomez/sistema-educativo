@@ -1,14 +1,56 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import DashboardLayout, { SectionCard, StatCard, EmptyState } from './DashboardLayout'
 import { api } from '../api'
-import { formatPercent, formatNumber, formatShortDate, formatAttempts } from './utils'
+import { formatNumber, formatPercent, formatShortDate, formatAttempts } from './utils'
+
+const RESOURCE_GROUPS = [
+  { key: 'videos', title: 'Videos', matcher: (type) => type.includes('video') },
+  {
+    key: 'ejercicios',
+    title: 'Ejercicios y práctica',
+    matcher: (type) =>
+      type.includes('ejercicio') ||
+      type.includes('quiz') ||
+      type.includes('evaluación') ||
+      type.includes('práctica') ||
+      type.includes('practica'),
+  },
+  { key: 'contenidos', title: 'Lecturas y contenidos', matcher: () => true },
+]
+
+function normalizeContenido(item) {
+  if (!item) return null
+  if (typeof item === 'string') return item
+  const { codigo, titulo } = item
+  if (codigo && titulo) return `${codigo} · ${titulo}`
+  return codigo || titulo || null
+}
+
+function groupResources(resources = []) {
+  const buckets = RESOURCE_GROUPS.map((group) => ({ ...group, items: [] }))
+  resources.forEach((resource) => {
+    const type = (resource?.tipo || '').toLowerCase()
+    const target = buckets.find((group) => group.matcher(type)) || buckets[buckets.length - 1]
+    target.items.push(resource)
+  })
+  const seen = new Set()
+  return buckets.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      const key = String(item._id || `${item.titulo}-${item.url}`)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }),
+  }))
+}
 
 function RecommendationList({ items }) {
   if (!items.length) {
     return (
       <EmptyState
         title="Sin recomendaciones activas"
-        description="Cuando registres más intentos generaremos sugerencias de refuerzo y repaso."
+        description="Cuando registres más intentos aparecerán aquí los temas de refuerzo sugeridos."
       />
     )
   }
@@ -48,7 +90,7 @@ function NotificationFeed({ items }) {
   if (!items.length) {
     return (
       <EmptyState
-        title="Sin notificaciones recientes"
+        title="Sin notificaciones"
         description="Te avisaremos aquí cuando existan recordatorios o mensajes importantes."
       />
     )
@@ -75,8 +117,8 @@ function HistoryTimeline({ items }) {
   if (!items.length) {
     return (
       <EmptyState
-        title="Sin actividad registrada"
-        description="Cuando completes ejercicios o recursos, verás tu historial de intentos aquí."
+        title="Sin actividad reciente"
+        description="Cuando completes ejercicios o recursos, verás tu historial aquí."
       />
     )
   }
@@ -116,62 +158,170 @@ function HistoryTimeline({ items }) {
   )
 }
 
-function CourseGrid({ courses, onSelect }) {
+function GradeSelection({ user, options, onSelect, saving, error }) {
+  const displayName = user?.nombre || user?.name || user?.email || 'Estudiante'
+  const gradeOptions = options && options.length
+    ? options
+    : [
+        { number: 1, label: '1ro. Básico', description: 'Plan oficial CNB' },
+        { number: 2, label: '2do. Básico', description: 'Plan oficial CNB' },
+        { number: 3, label: '3ro. Básico', description: 'Plan oficial CNB' },
+      ]
+
+  return (
+    <div className="grade-shell">
+      <div className="grade-card">
+        <div className="grade-card-inner">
+          <section className="grade-card-copy">
+            <header className="grade-card-header">
+              <div>
+                <h2>{displayName}</h2>
+                <span className="badge">ESTUDIANTE</span>
+              </div>
+              <p className="grade-lead">Selecciona tu grado para personalizar tu experiencia.</p>
+            </header>
+            <p className="grade-body">
+              Vinculamos tus avances con el Currículo Nacional Base de Guatemala (CNB). Elige el grado correspondiente
+              para habilitar tu tablero, progreso y recursos recomendados según tu nivel.
+            </p>
+            <ul className="grade-benefits">
+              <li>Contenido oficial organizado por competencias e indicadores.</li>
+              <li>Seguimiento de progreso y recomendaciones inteligentes.</li>
+              <li>Sincronización con tus intentos y reportes en tiempo real.</li>
+            </ul>
+          </section>
+          <section className="grade-card-selector">
+            <h3>Grados disponibles</h3>
+            <p className="muted">Esta elección quedará registrada y se usará en tus reportes.</p>
+            <div className="grade-options">
+              {gradeOptions.map((option) => (
+                <button
+                  key={option.number || option.code}
+                  type="button"
+                  className="grade-option"
+                  onClick={() => onSelect(option.number)}
+                  disabled={Boolean(saving)}
+                >
+                  <span className="grade-option-title">{option.label}</span>
+                  {option.description ? <span className="grade-option-sub">{option.description}</span> : null}
+                  <span className="grade-option-cta">
+                    {saving === option.number ? 'Asignando…' : 'Iniciar plan'}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {error ? <p className="grade-error">{error}</p> : null}
+          </section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HeroBanner({ user, summary }) {
+  const gradeLabel = user?.grade?.label || 'Sin grado asignado'
+  const gradeCode = user?.grade?.code ? `Plan ${user.grade.code}` : 'Selecciona tu grado para activar los contenidos'
+  const promedio = typeof summary?.promedioGeneral === 'number' ? `${summary.promedioGeneral.toFixed(1)} pts` : '0 pts'
+  const progreso = formatPercent(summary?.progresoTotal)
+  const completados = `${formatNumber(summary?.tareasCompletadas)} / ${formatNumber(summary?.tareasTotales)}`
+
+  return (
+    <div className="student-hero redesigned">
+      <div className="hero-intro">
+        <span className="hero-eyebrow">Currículo Nacional Base · Guatemala</span>
+        <h1>Hola, {user?.nombre?.split(' ')[0] || user?.nombre || user?.email || 'estudiante'} 👋</h1>
+        <p>
+          Explora tus áreas del CNB, revisa los temas oficiales y continúa con tus ejercicios y recursos personalizados
+          para tu grado.
+        </p>
+        <div className="hero-grade-chip">
+          <span className="grade-chip-label">{gradeLabel}</span>
+          <span className="grade-chip-sub">{gradeCode}</span>
+        </div>
+      </div>
+      <div className="hero-metrics-grid">
+        <StatCard
+          title="Promedio general"
+          value={promedio}
+          subtitle="Resultado ponderado de tus indicadores"
+          tone="accent"
+        />
+        <StatCard
+          title="Progreso total"
+          value={progreso}
+          subtitle={`Indicadores completados ${completados}`}
+          tone="soft"
+        />
+        <StatCard
+          title="Indicadores pendientes"
+          value={formatNumber(summary?.indicadoresPendientes)}
+          subtitle="Prioriza estas actividades para avanzar"
+          tone="soft"
+        />
+      </div>
+    </div>
+  )
+}
+
+function AreaShowcase({ courses, onSelect, activeId }) {
   if (!courses.length) {
     return (
       <EmptyState
         title="Sin áreas asignadas"
-        description="Cuando tu grado tenga áreas del CNB configuradas aparecerán en esta sección."
+        description="Cuando tu grado tenga áreas del CNB configuradas aparecerán aquí."
       />
     )
   }
+
   return (
-    <div className="course-grid">
+    <div className="area-grid">
       {courses.map((course) => {
-        const resume = []
-        if (typeof course.competencias === 'number') {
-          resume.push(`${formatNumber(course.competencias)} competencias`)
-        }
-        if (typeof course.recursos === 'number') {
-          resume.push(`${formatNumber(course.recursos)} recursos`)
-        }
+        const courseId = course.areaId || course.titulo
+        const competenciasLabel = typeof course.competencias === 'number'
+          ? `${formatNumber(course.competencias)} competencias`
+          : 'Competencias CNB'
+        const recursosLabel = typeof course.recursos === 'number'
+          ? `${formatNumber(course.recursos)} recursos`
+          : 'Recursos oficiales'
+        const isActive = activeId && activeId === course.areaId
         return (
-          <article key={course.areaId || course.titulo} className="course-card">
-            <header className="course-card-header">
-              <div>
-                <span className="pill accent">Área CNB</span>
-                <h4>{course.titulo}</h4>
-              </div>
-              <span className="course-progress">{formatPercent(course.progreso)}</span>
-            </header>
-            <p className="course-card-meta">{resume.length ? resume.join(' · ') : 'Plan oficial del grado'}</p>
-            <div className="course-card-body">
-              <p>
-                {formatNumber(course.completados)} de {formatNumber(course.totalIndicadores)} indicadores completados.
-              </p>
-              <div className="course-card-tags">
-                <span className="badge neutral">Pendientes {formatNumber(course.pendientes)}</span>
-                {typeof course.promedio === 'number' ? (
-                  <span className="badge info">{course.promedio} pts</span>
-                ) : null}
-              </div>
-              {course.siguiente ? (
-                <div className="course-card-next">
-                  <span className="muted">Próximo indicador</span>
-                  <strong>{course.siguiente.codigo || course.siguiente.descripcion}</strong>
-                </div>
-              ) : (
-                <div className="course-card-next">
-                  <span className="muted">Área completada</span>
-                  <strong>Sin pendientes</strong>
-                </div>
-              )}
+          <article key={courseId} className={`area-card${isActive ? ' is-active' : ''}`}>
+            <div className="area-card__header">
+              <span className="pill accent">Área CNB</span>
+              <h4>{course.titulo}</h4>
             </div>
-            <footer className="course-card-footer">
-              <button type="button" className="link-btn" onClick={() => onSelect(course)}>
-                Ver contenidos
-              </button>
-            </footer>
+            <p className="area-card__copy">
+              {competenciasLabel} · {recursosLabel}
+            </p>
+            <ul className="area-card__stats">
+              <li>
+                <span className="stat-label">Progreso</span>
+                <strong>{formatPercent(course.progreso)}</strong>
+              </li>
+              <li>
+                <span className="stat-label">Indicadores</span>
+                <strong>
+                  {formatNumber(course.completados)} / {formatNumber(course.totalIndicadores)}
+                </strong>
+              </li>
+              <li>
+                <span className="stat-label">Pendientes</span>
+                <strong>{formatNumber(course.pendientes)}</strong>
+              </li>
+              {typeof course.promedio === 'number' ? (
+                <li>
+                  <span className="stat-label">Promedio</span>
+                  <strong>{course.promedio} pts</strong>
+                </li>
+              ) : null}
+            </ul>
+            <div className="area-card__next">
+              <span className="muted">Siguiente tema</span>
+              <strong>{course.siguiente?.codigo || course.siguiente?.descripcion || 'Área completada'}</strong>
+            </div>
+            <button type="button" className="primary-btn" onClick={() => onSelect(course)}>
+              Ver contenidos del área
+            </button>
           </article>
         )
       })}
@@ -179,45 +329,7 @@ function CourseGrid({ courses, onSelect }) {
   )
 }
 
-const RESOURCE_GROUPS = [
-  { key: 'videos', title: 'Videos', matcher: (type) => type.includes('video') },
-  {
-    key: 'ejercicios',
-    title: 'Ejercicios y práctica',
-    matcher: (type) => type.includes('ejercicio') || type.includes('quiz') || type.includes('evaluación') || type.includes('práctica') || type.includes('practica'),
-  },
-  { key: 'contenidos', title: 'Lecturas y recursos complementarios', matcher: () => true },
-]
-
-function normalizeContenido(item) {
-  if (!item) return null
-  if (typeof item === 'string') return item
-  const { codigo, titulo } = item
-  if (codigo && titulo) return `${codigo} · ${titulo}`
-  return codigo || titulo || null
-}
-
-function groupResources(resources = []) {
-  const buckets = RESOURCE_GROUPS.map((group) => ({ ...group, items: [] }))
-  resources.forEach((resource) => {
-    const type = (resource?.tipo || '').toLowerCase()
-    const target = buckets.find((group) => group.matcher(type)) || buckets[buckets.length - 1]
-    target.items.push(resource)
-  })
-  // Evita duplicar recursos en los grupos siguientes
-  const seen = new Set()
-  return buckets.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      const key = String(item._id || `${item.titulo}-${item.url}`)
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    }),
-  }))
-}
-
-function CourseDetailModal({ course, detail, loading, error, onClose }) {
+function CourseDetailDrawer({ course, detail, loading, error, onClose }) {
   if (!course) return null
   const resumen = detail?.resumen || {
     totalIndicadores: 0,
@@ -229,26 +341,27 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
   const gradeLabel = detail?.grade?.label
 
   return (
-    <div className="course-modal" role="dialog" aria-modal="true">
-      <div className="course-modal__overlay" onClick={onClose} />
-      <div className="course-modal__panel">
-        <header className="course-modal__header">
+    <div className="course-drawer" role="dialog" aria-modal="true">
+      <div className="course-drawer__backdrop" onClick={onClose} role="presentation" />
+      <aside className="course-drawer__panel">
+        <header className="course-drawer__header">
           <div>
-            <h3>{course.titulo}</h3>
+            <span className="pill neutral">Área CNB</span>
+            <h3>{course?.titulo || 'Área seleccionada'}</h3>
             {gradeLabel ? <span className="muted">{gradeLabel}</span> : null}
           </div>
           <button type="button" className="ghost-btn" onClick={onClose}>
             Cerrar
           </button>
         </header>
-        <div className="course-modal__body">
+        <div className="course-drawer__content">
           {loading ? (
-            <p>Cargando contenidos...</p>
+            <p className="muted">Cargando contenidos del área...</p>
           ) : error ? (
             <EmptyState title="No se pudo cargar el área" description={error} />
           ) : competencias.length ? (
             <>
-              <div className="course-overview">
+              <div className="drawer-summary">
                 <div>
                   <span className="card-label">Indicadores</span>
                   <strong>{resumen.totalIndicadores}</strong>
@@ -268,19 +381,21 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
                   </strong>
                 </div>
               </div>
-              <div className="competence-stack">
+              <div className="drawer-competencies">
                 {competencias.map((comp) => {
                   const indicadores = Array.isArray(comp.indicadores) ? comp.indicadores : []
                   return (
-                    <article key={comp.id || comp.codigo} className="competence-card">
-                      <header className="competence-header">
-                        <div>
-                          <span className="pill neutral">{comp.codigo || 'Competencia'}</span>
-                          <strong>{comp.enunciado}</strong>
+                    <details key={comp.id || comp.codigo} className="drawer-competence" open>
+                      <summary>
+                        <div className="drawer-competence__meta">
+                          <div>
+                            <span className="pill neutral">{comp.codigo || 'Competencia'}</span>
+                            <strong>{comp.enunciado}</strong>
+                          </div>
+                          <span className="badge info">{formatPercent(comp.progreso)}</span>
                         </div>
-                        <span className="badge info">{formatPercent(comp.progreso)}</span>
-                      </header>
-                      <div className="indicator-grid">
+                      </summary>
+                      <div className="drawer-indicators">
                         {indicadores.map((ind) => {
                           const contenidos = (Array.isArray(ind.contenidos) ? ind.contenidos : [])
                             .map((item) => normalizeContenido(item))
@@ -288,13 +403,13 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
                           const recursos = Array.isArray(ind.recursos) ? ind.recursos : []
                           const grouped = groupResources(recursos)
                           return (
-                            <div key={ind.id || ind.codigo} className="indicator-panel">
-                              <div className="indicator-head">
+                            <article key={ind.id || ind.codigo} className="drawer-indicator">
+                              <header className="drawer-indicator__head">
                                 <div>
                                   <strong>{ind.codigo}</strong>
-                                  {ind.descripcion ? <p className="muted">{ind.descripcion}</p> : null}
+                                  {ind.descripcion ? <p>{ind.descripcion}</p> : null}
                                 </div>
-                                <div className="indicator-tags">
+                                <div className="drawer-indicator__tags">
                                   <span
                                     className={`badge ${
                                       ind.estado === 'completado'
@@ -310,25 +425,25 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
                                     <span className="badge info">{ind.puntuacion} pts</span>
                                   ) : null}
                                 </div>
-                              </div>
+                              </header>
                               {contenidos.length ? (
-                                <div className="indicator-contents">
-                                  <h4>Temas y subtemas del CNB</h4>
+                                <section className="drawer-section">
+                                  <h4>Temas y subtemas</h4>
                                   <ul>
                                     {contenidos.map((contenido, idx) => (
                                       <li key={idx}>{contenido}</li>
                                     ))}
                                   </ul>
-                                </div>
+                                </section>
                               ) : null}
-                              <div className="indicator-resources">
-                                <h4>Recursos asociados</h4>
-                                <div className="resource-groups">
+                              <section className="drawer-section">
+                                <h4>Recursos del indicador</h4>
+                                <div className="drawer-resources">
                                   {grouped.map((group) => (
-                                    <div key={group.key} className="resource-group">
+                                    <div key={group.key} className="drawer-resource-group">
                                       <h5>{group.title}</h5>
                                       {group.items.length ? (
-                                        <ul className="resource-list">
+                                        <ul>
                                           {group.items.map((resource) => (
                                             <li key={resource._id || resource.url}>
                                               <a href={resource.url} target="_blank" rel="noopener noreferrer">
@@ -342,17 +457,17 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
                                           ))}
                                         </ul>
                                       ) : (
-                                        <p className="muted">No hay recursos disponibles en esta categoría.</p>
+                                        <p className="muted">Sin recursos registrados en esta categoría.</p>
                                       )}
                                     </div>
                                   ))}
                                 </div>
-                              </div>
-                            </div>
+                              </section>
+                            </article>
                           )
                         })}
                       </div>
-                    </article>
+                    </details>
                   )
                 })}
               </div>
@@ -361,68 +476,7 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
             <EmptyState title="Área sin contenidos" description="No se encontraron indicadores configurados." />
           )}
         </div>
-      </div>
-    </div>
-  )
-}
-
-function GradeSelection({ user, options, onSelect, saving, error }) {
-  const displayName = user?.nombre || user?.name || user?.email || 'Estudiante'
-  const gradeOptions = options && options.length ? options : [
-    { number: 1, label: '1ro. Básico', description: 'Plan oficial CNB' },
-    { number: 2, label: '2do. Básico', description: 'Plan oficial CNB' },
-    { number: 3, label: '3ro. Básico', description: 'Plan oficial CNB' },
-  ]
-
-  return (
-    <div className="grade-shell">
-      <div className="grade-card">
-        <div className="grade-card-inner">
-          <section className="grade-card-copy">
-            <header className="grade-card-header">
-              <div>
-                <h2>{displayName}</h2>
-                <span className="badge">ESTUDIANTE</span>
-              </div>
-              <p className="grade-lead">Selecciona tu grado para personalizar tu experiencia.</p>
-            </header>
-            <p className="grade-body">
-              Vinculamos tus avances con el Currículo Nacional Base de Guatemala (CNB).
-              Elige el grado correspondiente para habilitar tu tablero, progreso y recursos
-              recomendados según tu nivel.
-            </p>
-            <ul className="grade-benefits">
-              <li>Contenido oficial organizado por competencias e indicadores.</li>
-              <li>Seguimiento de progreso y recomendaciones inteligentes.</li>
-              <li>Sincronización con tus intentos y reportes en tiempo real.</li>
-            </ul>
-          </section>
-          <section className="grade-card-selector">
-            <h3>Grados disponibles</h3>
-            <p className="muted">Esta elección queda registrada y será utilizada en tus reportes.</p>
-            <div className="grade-options">
-              {gradeOptions.map((option) => (
-                <button
-                  key={option.number || option.code}
-                  type="button"
-                  className="grade-option"
-                  onClick={() => onSelect(option.number)}
-                  disabled={Boolean(saving)}
-                >
-                  <span className="grade-option-title">{option.label}</span>
-                  {option.description ? (
-                    <span className="grade-option-sub">{option.description}</span>
-                  ) : null}
-                  <span className="grade-option-cta">
-                    {saving === option.number ? 'Asignando…' : 'Iniciar plan'}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {error ? <p className="grade-error">{error}</p> : null}
-          </section>
-        </div>
-      </div>
+      </aside>
     </div>
   )
 }
@@ -435,166 +489,111 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   const [courseDetail, setCourseDetail] = useState(null)
   const [courseLoading, setCourseLoading] = useState(false)
   const [courseError, setCourseError] = useState(null)
+  const [courseCache, setCourseCache] = useState({})
   const [gradeSaving, setGradeSaving] = useState(null)
   const [gradeError, setGradeError] = useState(null)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    let mounted = true
+    let active = true
     const load = async () => {
       try {
         setLoading(true)
         const response = await api.studentDashboard()
-        if (mounted) {
-          setData(response)
-          setError(null)
-        }
+        if (!active) return
+        setData(response)
+        setError(null)
       } catch (err) {
-        if (mounted) setError(err.message || 'No se pudo cargar el panel')
+        if (!active) return
+        setError(err.message || 'No se pudo cargar el panel del estudiante')
       } finally {
-        if (mounted) setLoading(false)
+        if (active) setLoading(false)
       }
     }
     load()
-    return () => { mounted = false }
-  }, [user?.id, reloadKey])
+    return () => {
+      active = false
+    }
+  }, [reloadKey])
 
   const courses = useMemo(() => (Array.isArray(data?.cursos) ? data.cursos : []), [data])
-  const recommendations = useMemo(() => (Array.isArray(data?.recomendaciones) ? data.recomendaciones : []), [data])
-  const notifications = useMemo(() => (Array.isArray(data?.notificaciones) ? data.notificaciones : []), [data])
-  const historyItems = useMemo(() => (Array.isArray(data?.historial) ? data.historial : []), [data])
-
-  const summaryCards = useMemo(() => {
-    if (!data || data.requiresGradeSelection) return []
-    const summary = data.summary || {}
-    const pendientes =
-      typeof summary.indicadoresPendientes === 'number'
-        ? summary.indicadoresPendientes
-        : Math.max((summary.tareasTotales || 0) - (summary.tareasCompletadas || 0), 0)
-    const attempts = data.intentos || {}
-    const attemptsLabel = formatAttempts({
-      used: attempts.usados,
-      limit: attempts.limite || 3,
-    })
-    const attemptsRemaining = Math.max((attempts.limite || 3) - (attempts.usados || 0), 0)
-    const recomendacionesActivas =
-      typeof summary.recomendacionesActivas === 'number'
-        ? summary.recomendacionesActivas
-        : (Array.isArray(data?.recomendaciones) ? data.recomendaciones.length : 0)
-    return [
-      {
-        title: 'Promedio general',
-        value:
-          typeof summary.promedioGeneral === 'number'
-            ? `${summary.promedioGeneral} pts`
-            : 'Sin datos',
-        subtitle: 'Últimos indicadores evaluados',
-        tone: 'accent',
-      },
-      {
-        title: 'Progreso total',
-        value: formatPercent(summary.progresoTotal),
-        subtitle: `${formatNumber(summary.tareasCompletadas || 0)} de ${formatNumber(summary.tareasTotales || 0)} indicadores`,
-      },
-      {
-        title: 'Indicadores pendientes',
-        value: formatNumber(pendientes),
-        subtitle: 'Temas por completar en el plan CNB',
-      },
-      {
-        title: 'Intentos disponibles',
-        value: attemptsLabel,
-        subtitle: `${formatNumber(attemptsRemaining)} restantes de ${formatNumber(attempts.limite || 3)}`,
-        tone: 'soft',
-      },
-      {
-        title: 'Recomendaciones activas',
-        value: formatNumber(recomendacionesActivas),
-        subtitle: 'Sugerencias listas para reforzar',
-      },
-    ]
-  }, [data])
-
-  const featuredCourse = useMemo(() => {
-    if (!courses.length) return null
-    if (data?.cursoDestacadoId) {
-      const match = courses.find((course) => course.areaId === data.cursoDestacadoId)
-      if (match) return match
-    }
-    const sorted = [...courses].sort((a, b) => {
-      const pendingDiff = (b.pendientes || 0) - (a.pendientes || 0)
-      if (pendingDiff !== 0) return pendingDiff
-      const progressDiff = (a.progreso || 0) - (b.progreso || 0)
-      if (progressDiff !== 0) return progressDiff
-      return (a.titulo || '').localeCompare(b.titulo || '', 'es')
-    })
-    return sorted[0] || null
-  }, [courses, data?.cursoDestacadoId])
-
   const navItems = useMemo(() => {
     if (!data || data.requiresGradeSelection) return []
-    const items = [{ id: 'student-overview', label: 'Inicio' }]
-    if (featuredCourse) {
-      items.push({ id: 'student-featured', label: 'Recomendado' })
-    }
-    items.push({ id: 'student-courses', label: 'Cursos CNB', badge: courses.length })
-    items.push({ id: 'student-recommendations', label: 'Recomendaciones', badge: recommendations.length })
-    items.push({ id: 'student-history', label: 'Historial', badge: historyItems.length })
-    items.push({ id: 'student-notifications', label: 'Notificaciones', badge: notifications.length })
-    return items
-  }, [data, courses, recommendations, historyItems, notifications, featuredCourse])
+    return [
+      { id: 'overview', label: 'Inicio' },
+      { id: 'areas', label: 'Áreas CNB', badge: courses.length ? formatNumber(courses.length) : null },
+      {
+        id: 'recomendaciones',
+        label: 'Recomendaciones',
+        badge: data.summary?.recomendacionesActivas ? formatNumber(data.summary.recomendacionesActivas) : null,
+      },
+      {
+        id: 'notificaciones',
+        label: 'Notificaciones',
+        badge: data.summary?.notificacionesNoLeidas ? formatNumber(data.summary.notificacionesNoLeidas) : null,
+      },
+      { id: 'historial', label: 'Historial' },
+    ]
+  }, [data, courses])
 
-  const openCourse = async (course) => {
-    setSelectedCourse(course)
-    setCourseDetail(null)
-    setCourseError(null)
-    const areaId = course?.areaId
-    if (!areaId) {
-      setCourseError('No se pudo identificar el área seleccionada.')
-      return
-    }
-    try {
-      setCourseLoading(true)
-      const detail = await api.studentCourseDetail(areaId)
-      setCourseDetail(detail)
-    } catch (err) {
-      setCourseError(err.message || 'No se pudo cargar el curso')
-    } finally {
-      setCourseLoading(false)
-    }
-  }
+  const selectGrade = useCallback(
+    async (gradeNumber) => {
+      if (!gradeNumber || gradeSaving) return
+      try {
+        setGradeSaving(gradeNumber)
+        setGradeError(null)
+        await api.updateProfile({ grado: gradeNumber })
+        setReloadKey((key) => key + 1)
+        if (onUserUpdate) {
+          onUserUpdate()
+        }
+      } catch (err) {
+        setGradeError(err.message || 'No se pudo asignar el grado')
+      } finally {
+        setGradeSaving(null)
+      }
+    },
+    [gradeSaving, onUserUpdate],
+  )
 
-  const closeCourse = () => {
+  const openCourse = useCallback(
+    async (course) => {
+      if (!course?.areaId) return
+      setSelectedCourse(course)
+      const cached = courseCache[course.areaId]
+      if (cached) {
+        setCourseDetail(cached)
+        setCourseError(null)
+        setCourseLoading(false)
+        return
+      }
+      try {
+        setCourseDetail(null)
+        setCourseLoading(true)
+        setCourseError(null)
+        const response = await api.studentCourseDetail(course.areaId)
+        setCourseCache((prev) => ({ ...prev, [course.areaId]: response }))
+        setCourseDetail(response)
+      } catch (err) {
+        setCourseError(err.message || 'No se pudieron cargar los contenidos del área')
+      } finally {
+        setCourseLoading(false)
+      }
+    },
+    [courseCache],
+  )
+
+  const closeCourse = useCallback(() => {
     setSelectedCourse(null)
     setCourseDetail(null)
     setCourseError(null)
-  }
-
-  const selectGrade = async (gradeNumber) => {
-    if (!gradeNumber || gradeSaving === gradeNumber) return
-    try {
-      setGradeSaving(gradeNumber)
-      setGradeError(null)
-      await api.updateProfile({ grado: gradeNumber })
-      if (typeof onUserUpdate === 'function') {
-        try {
-          await onUserUpdate()
-        } catch (e) {
-          // ignoramos errores silenciosamente
-        }
-      }
-      setReloadKey((key) => key + 1)
-    } catch (err) {
-      setGradeError(err.message || 'No se pudo actualizar el grado')
-    } finally {
-      setGradeSaving(null)
-    }
-  }
+    setCourseLoading(false)
+  }, [])
 
   if (loading) {
     return (
       <div className="dashboard-shell loading">
-        <p>Cargando panel...</p>
+        <p>Cargando panel estudiantil...</p>
       </div>
     )
   }
@@ -621,120 +620,77 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     )
   }
 
-  const attemptsLabel = formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite || 3 })
-  const attemptsRemaining = Math.max((data.intentos?.limite || 3) - (data.intentos?.usados || 0), 0)
-
-  const hero = (
-    <section id="student-overview" className="student-hero">
-      <div className="student-hero__copy">
-        <span className="hero-eyebrow">Panel estudiantil</span>
-        <h1>Mis cursos CNB · {data.user?.grade?.label}</h1>
-        <p>
-          Explora las áreas oficiales del Currículo Nacional Base de Guatemala con videos, ejercicios y contenidos
-          organizados por competencias para tu grado.
-        </p>
-        <div className="hero-summary">
-          <div>
-            <span className="muted">Intentos disponibles</span>
-            <strong>{attemptsLabel}</strong>
-            <small>{formatNumber(attemptsRemaining)} restantes</small>
-          </div>
-          <div>
-            <span className="muted">Recomendaciones activas</span>
-            <strong>{formatNumber(recommendations.length)}</strong>
-            <small>Preparadas para ti</small>
-          </div>
-        </div>
-      </div>
-      <div className="student-hero__stats">
-        {summaryCards.map((card) => (
-          <StatCard key={card.title} {...card} />
-        ))}
-      </div>
-    </section>
-  )
-
   return (
     <>
-      <DashboardLayout user={data.user} roleLabel="Estudiante" navItems={navItems} hero={hero}>
-        {featuredCourse ? (
-          <SectionCard
-            id="student-featured"
-            title="Recomendado para ti"
-            description={`Prioridad sugerida según tus indicadores pendientes. Te quedan ${formatNumber(
-              attemptsRemaining,
-            )} intentos disponibles.`}
-          >
-            <div className="featured-course">
-              <div className="featured-course__copy">
-                <span className="pill accent">Área sugerida</span>
-                <h3>{featuredCourse.titulo}</h3>
-                <p>
-                  {featuredCourse.pendientes > 0
-                    ? `Te faltan ${formatNumber(featuredCourse.pendientes)} indicadores para completar esta área.`
-                    : 'Has completado todos los indicadores de esta área.'}
-                </p>
-                <div className="featured-course__tags">
-                  <span className="badge neutral">{formatNumber(featuredCourse.competencias)} competencias</span>
-                  <span className="badge neutral">{formatNumber(featuredCourse.recursos)} recursos</span>
-                  {typeof featuredCourse.promedio === 'number' ? (
-                    <span className="badge info">{featuredCourse.promedio} pts</span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="featured-course__actions">
-                <div className="featured-course__next">
-                  <span className="muted">
-                    {featuredCourse.siguiente ? 'Próximo indicador' : 'Área completada'}
-                  </span>
-                  <strong>
-                    {featuredCourse.siguiente
-                      ? featuredCourse.siguiente.codigo || featuredCourse.siguiente.descripcion
-                      : 'Sin pendientes'}
-                  </strong>
-                </div>
-                <button type="button" className="primary-btn" onClick={() => openCourse(featuredCourse)}>
-                  Ver contenidos
-                </button>
-              </div>
-            </div>
-          </SectionCard>
-        ) : null}
-
+      <DashboardLayout
+        user={data.user}
+        roleLabel="ESTUDIANTE"
+        navItems={navItems}
+        hero={<HeroBanner user={data.user} summary={data.summary} />}
+      >
         <SectionCard
-          id="student-courses"
-          title="Cursos del CNB"
-          description="Selecciona un área para explorar competencias, temas, videos, ejercicios y contenidos relacionados."
+          id="overview"
+          title="Resumen del grado"
+          description="Visualiza el avance de tus indicadores, intentos registrados y recordatorios pendientes."
         >
-          <CourseGrid courses={courses} onSelect={openCourse} />
+          <div className="stat-grid">
+            <StatCard
+              title="Indicadores completados"
+              value={`${formatNumber(data.summary?.tareasCompletadas)} / ${formatNumber(data.summary?.tareasTotales)}`}
+              subtitle="Total de indicadores trabajados"
+            />
+            <StatCard
+              title="Intentos registrados"
+              value={formatNumber(data.intentos?.totales)}
+              subtitle={`Disponibles ${formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite })}`}
+            />
+            <StatCard
+              title="Recomendaciones activas"
+              value={formatNumber(data.summary?.recomendacionesActivas)}
+              subtitle="Refuerzos personalizados en tu bandeja"
+            />
+            <StatCard
+              title="Notificaciones sin leer"
+              value={formatNumber(data.summary?.notificacionesNoLeidas)}
+              subtitle="Mensajes importantes del sistema"
+            />
+          </div>
         </SectionCard>
 
         <SectionCard
-          id="student-recommendations"
+          id="areas"
+          title="Áreas del CNB"
+          description="Selecciona una materia para revisar competencias, temas, videos, ejercicios y contenido oficial."
+        >
+          <AreaShowcase courses={courses} onSelect={openCourse} activeId={selectedCourse?.areaId} />
+        </SectionCard>
+
+        <SectionCard
+          id="recomendaciones"
           title="Recomendaciones personalizadas"
-          description="Recursos oficiales y actividades sugeridas con base en tu progreso y tus intentos recientes."
+          description="Indicadores y recursos sugeridos con base en tu progreso y tus intentos recientes."
         >
-          <RecommendationList items={recommendations} />
+          <RecommendationList items={Array.isArray(data.recomendaciones) ? data.recomendaciones : []} />
         </SectionCard>
 
         <SectionCard
-          id="student-history"
-          title="Últimos intentos"
-          description="Revisa tus actividades más recientes y el estado de cada indicador evaluado."
+          id="notificaciones"
+          title="Notificaciones recientes"
+          description="Mensajes, recordatorios y alertas enviados a tu cuenta."
         >
-          <HistoryTimeline items={historyItems} />
+          <NotificationFeed items={Array.isArray(data.notificaciones) ? data.notificaciones : []} />
         </SectionCard>
 
         <SectionCard
-          id="student-notifications"
-          title="Notificaciones y recordatorios"
-          description="Mensajes importantes enviados a tu correo y dentro de la plataforma."
+          id="historial"
+          title="Historial de actividad"
+          description="Últimos intentos e indicadores trabajados en la plataforma."
         >
-          <NotificationFeed items={notifications} />
+          <HistoryTimeline items={Array.isArray(data.historial) ? data.historial : []} />
         </SectionCard>
       </DashboardLayout>
 
-      <CourseDetailModal
+      <CourseDetailDrawer
         course={selectedCourse}
         detail={courseDetail}
         loading={courseLoading}
