@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import DashboardLayout, { SectionCard, StatCard, EmptyState } from './DashboardLayout'
 import { api } from '../api'
 import {
   formatDuration,
@@ -9,115 +10,181 @@ import {
   formatAttempts,
 } from './utils'
 
-function SummaryCard({ title, value, detail }) {
-  return (
-    <div className="dash-card summary-card">
-      <span className="card-label">{title}</span>
-      <strong className="card-value">{value}</strong>
-      {detail ? <span className="card-detail">{detail}</span> : null}
-    </div>
-  )
-}
-
-function ProgressRow({ course }) {
-  const { titulo, progreso, completados, totalIndicadores } = course
-  return (
-    <div className="progress-row">
-      <div className="progress-meta">
-        <strong>{titulo}</strong>
-        <span>{completados} de {totalIndicadores} indicadores</span>
+function UsageSpark({ usage }) {
+  const sessions = Array.isArray(usage?.sessions) ? usage.sessions : []
+  if (!sessions.length) {
+    return (
+      <div className="usage-empty">
+        <span className="muted">Sin sesiones registradas.</span>
       </div>
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${Math.min(100, progreso)}%` }} />
-      </div>
-      <span className="progress-value">{formatPercent(progreso)}</span>
-    </div>
-  )
-}
-
-function UsageChart({ usage }) {
-  const maxSeconds = Math.max(...usage.sessions.map((s) => s.seconds), 1)
+    )
+  }
+  const maxSeconds = Math.max(...sessions.map((s) => Number(s.seconds) || 0), 1)
   return (
-    <div className="usage-chart">
-      {usage.sessions.map((session) => (
-        <div key={session.date} className="usage-bar">
-          <span className="bar-label">{weekdayLabel(session.date)}</span>
-          <div className="bar-track">
+    <div className="usage-spark">
+      {sessions.map((session) => (
+        <div key={session.date} className="usage-spark-row">
+          <span className="usage-day">{weekdayLabel(session.date)}</span>
+          <div className="usage-meter">
             <div
-              className="bar-fill"
-              style={{ width: `${(session.seconds / maxSeconds) * 100}%` }}
+              className="usage-meter-fill"
+              style={{ width: `${Math.min(100, (session.seconds / maxSeconds) * 100)}%` }}
             />
           </div>
-          <span className="bar-value">{formatDuration(session.seconds)}</span>
+          <span className="usage-time">{formatDuration(session.seconds)}</span>
         </div>
       ))}
     </div>
   )
 }
 
-function RecommendationBlock({ item }) {
+function RecommendationList({ items }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Sin recomendaciones activas"
+        description="Cuando registres más intentos generaremos sugerencias de refuerzo y repaso."
+      />
+    )
+  }
   return (
-    <div className="recommendation-item">
-      <div className="recommendation-header">
-        <strong>{item.indicador?.codigo || 'Indicador recomendado'}</strong>
-        <span className={`pill ${item.motivo === 'repaso' ? 'info' : 'warning'}`}>
-          {item.motivo === 'repaso' ? 'Repaso' : 'Refuerzo'}
-        </span>
-      </div>
-      {item.indicador?.descripcion ? (
-        <p className="muted">{item.indicador.descripcion}</p>
-      ) : null}
-      <ul className="resource-list">
-        {item.recursos.map((resource) => (
-          <li key={resource._id}>
-            <a href={resource.url} target="_blank" rel="noopener noreferrer">
-              <span className="resource-title">{resource.titulo}</span>
-              <span className="resource-meta">{resource.tipo}{resource.proveedor ? ` · ${resource.proveedor}` : ''}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+    <div className="recommendation-grid">
+      {items.map((item) => (
+        <article key={item.indicadorId || item._id} className="recommendation-card">
+          <header>
+            <div>
+              <span className="pill neutral">{item.motivo === 'repaso' ? 'Repaso' : 'Refuerzo'}</span>
+              <strong>{item.indicador?.codigo || 'Indicador recomendado'}</strong>
+            </div>
+            <span className="muted">{item.indicador?.areaId ? 'Área CNB' : 'Sistema'}</span>
+          </header>
+          {item.indicador?.descripcion ? <p>{item.indicador.descripcion}</p> : null}
+          {item.recursos?.length ? (
+            <ul className="resource-list">
+              {item.recursos.map((resource) => (
+                <li key={resource._id}>
+                  <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                    <strong>{resource.titulo}</strong>
+                    <span>{resource.tipo}{resource.proveedor ? ` · ${resource.proveedor}` : ''}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="muted">Sin recursos asociados.</span>
+          )}
+        </article>
+      ))}
     </div>
   )
 }
 
-function NotificationList({ items }) {
-  if (!items.length) return <p className="muted">No tienes notificaciones recientes.</p>
+function NotificationFeed({ items }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Sin notificaciones recientes"
+        description="Te avisaremos aquí cuando existan recordatorios o mensajes importantes."
+      />
+    )
+  }
   return (
-    <ul className="notification-list">
+    <ul className="notification-feed">
+      {items.map((item) => {
+        const type = (item.tipo || 'Notificación').replace(/_/g, ' ')
+        return (
+          <li key={item._id} className={item.leida ? '' : 'is-unread'}>
+            <div className="feed-meta">
+              <span className={`pill ${item.tipo === 'repaso' ? 'info' : 'accent'}`}>{type}</span>
+              <span className="muted">{formatShortDate(item.fecha || item.createdAt)}</span>
+            </div>
+            <p>{item.mensaje}</p>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function HistoryTimeline({ items }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Sin actividad registrada"
+        description="Cuando completes ejercicios o recursos, verás tu historial de intentos aquí."
+      />
+    )
+  }
+  return (
+    <ul className="timeline">
       {items.map((item) => (
-        <li key={item._id} className={item.leida ? '' : 'unread'}>
-          <div>
-            <strong>{item.tipo === 'repaso' ? 'Repaso sugerido' : 'Notificación'}</strong>
-            <span className="muted">{formatShortDate(item.fecha || item.createdAt)}</span>
+        <li key={item.id}>
+          <div className="timeline-dot" />
+          <div className="timeline-content">
+            <div className="timeline-header">
+              <strong>{item.indicador?.codigo || 'Indicador'}</strong>
+              <span className="muted">{formatShortDate(item.fecha)}</span>
+            </div>
+            <p>{item.indicador?.descripcion || 'Actividad registrada'}</p>
+            <div className="timeline-tags">
+              {item.estado ? (
+                <span
+                  className={`badge ${
+                    item.estado === 'completado'
+                      ? 'success'
+                      : item.estado === 'en_progreso'
+                      ? 'warning'
+                      : 'muted'
+                  }`}
+                >
+                  {item.estado.replace('_', ' ')}
+                </span>
+              ) : null}
+              {typeof item.puntuacion === 'number' ? (
+                <span className="badge info">{item.puntuacion} pts</span>
+              ) : null}
+            </div>
           </div>
-          <p>{item.mensaje}</p>
         </li>
       ))}
     </ul>
   )
 }
 
-function HistoryList({ items }) {
-  if (!items.length) return <p className="muted">Sin actividad reciente.</p>
+function CourseGrid({ courses, onSelect }) {
+  if (!courses.length) {
+    return (
+      <EmptyState
+        title="Sin áreas asignadas"
+        description="Cuando tu grado tenga áreas del CNB configuradas aparecerán en esta sección."
+      />
+    )
+  }
   return (
-    <ul className="history-list">
-      {items.map((item) => (
-        <li key={item.id}>
-          <div className="history-meta">
-            <strong>{item.indicador?.codigo || 'Indicador'}</strong>
-            <span className="muted">{formatShortDate(item.fecha)}</span>
+    <div className="course-grid">
+      {courses.map((course) => (
+        <button key={course.areaId || course.titulo} type="button" className="course-card" onClick={() => onSelect(course)}>
+          <div className="course-card-header">
+            <strong>{course.titulo}</strong>
+            <span className="pill info">{formatPercent(course.progreso)}</span>
           </div>
-          <p>{item.indicador?.descripcion || 'Actividad registrada'}</p>
-          <span className={`badge ${item.estado === 'completado' ? 'success' : item.estado === 'en_progreso' ? 'warning' : 'muted'}`}>
-            {item.estado?.replace('_', ' ')}
-          </span>
-          {typeof item.puntuacion === 'number' ? (
-            <span className="badge info">{item.puntuacion} pts</span>
-          ) : null}
-        </li>
+          <div className="course-card-body">
+            <span>{course.completados} de {course.totalIndicadores} indicadores</span>
+            {typeof course.promedio === 'number' ? <span className="muted">Promedio {course.promedio} pts</span> : null}
+          </div>
+          {course.siguiente ? (
+            <div className="course-card-footer">
+              <span className="muted">Próximo indicador</span>
+              <strong>{course.siguiente.codigo || course.siguiente.descripcion}</strong>
+            </div>
+          ) : (
+            <div className="course-card-footer">
+              <span className="muted">Estás al día en esta área</span>
+            </div>
+          )}
+        </button>
       ))}
-    </ul>
+    </div>
   )
 }
 
@@ -130,62 +197,66 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
     promedio: null,
   }
   const competencias = Array.isArray(detail?.competencias) ? detail.competencias : []
-
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
-        <header className="modal-header">
+    <div className="course-modal" role="dialog" aria-modal="true">
+      <div className="course-modal__overlay" onClick={onClose} />
+      <div className="course-modal__panel">
+        <header className="course-modal__header">
           <div>
             <h3>{course.titulo}</h3>
             {detail?.grade?.label ? <span className="muted">{detail.grade.label}</span> : null}
           </div>
-          <button type="button" className="ghost-btn" onClick={onClose}>Cerrar</button>
+          <button type="button" className="ghost-btn" onClick={onClose}>
+            Cerrar
+          </button>
         </header>
-        {loading ? (
-          <div className="modal-body"><p>Cargando contenidos...</p></div>
-        ) : error ? (
-          <div className="modal-body error"><p>{error}</p></div>
-        ) : detail ? (
-          <div className="modal-body">
-            <section className="modal-summary">
-              <div>
-                <span className="card-label">Indicadores</span>
-                <strong>{resumen.totalIndicadores}</strong>
+        <div className="course-modal__body">
+          {loading ? (
+            <p>Cargando contenidos...</p>
+          ) : error ? (
+            <EmptyState title="No se pudo cargar el área" description={error} />
+          ) : competencias.length ? (
+            <>
+              <div className="course-summary">
+                <div>
+                  <span className="card-label">Indicadores</span>
+                  <strong>{resumen.totalIndicadores}</strong>
+                </div>
+                <div>
+                  <span className="card-label">Completados</span>
+                  <strong>{resumen.completados}</strong>
+                </div>
+                <div>
+                  <span className="card-label">Progreso</span>
+                  <strong>{formatPercent(resumen.progreso)}</strong>
+                </div>
+                <div>
+                  <span className="card-label">Promedio</span>
+                  <strong>
+                    {typeof resumen.promedio === 'number' ? `${resumen.promedio} pts` : 'Sin datos'}
+                  </strong>
+                </div>
               </div>
-              <div>
-                <span className="card-label">Completados</span>
-                <strong>{resumen.completados}</strong>
-              </div>
-              <div>
-                <span className="card-label">Progreso</span>
-                <strong>{formatPercent(resumen.progreso)}</strong>
-              </div>
-              <div>
-                <span className="card-label">Promedio</span>
-                <strong>
-                  {typeof resumen.promedio === 'number' ? `${resumen.promedio} pts` : 'Sin datos'}
-                </strong>
-              </div>
-            </section>
-            <div className="competence-list">
-              {competencias.length ? (
-                competencias.map((comp) => {
+              <div className="competence-list">
+                {competencias.map((comp) => {
                   const indicadores = Array.isArray(comp.indicadores) ? comp.indicadores : []
                   return (
                     <article key={comp.id || comp.codigo} className="competence-card">
                       <header>
-                        <strong>{comp.codigo || 'Competencia'}</strong>
-                        <span className="muted">{comp.enunciado}</span>
+                        <div>
+                          <span className="pill neutral">{comp.codigo || 'Competencia'}</span>
+                          <strong>{comp.enunciado}</strong>
+                        </div>
                         <span className="badge info">{formatPercent(comp.progreso)}</span>
                       </header>
-                      <ul className="indicator-list">
-                        {indicadores.map((ind) => {
-                          const contenidos = Array.isArray(ind.contenidos) ? ind.contenidos : []
-                          const recursos = Array.isArray(ind.recursos) ? ind.recursos : []
-                          return (
-                            <li key={ind.id || ind.codigo}>
-                              <div className="indicator-header">
-                                <strong>{ind.codigo}</strong>
+                      {indicadores.map((ind) => {
+                        const contenidos = Array.isArray(ind.contenidos) ? ind.contenidos : []
+                        const recursos = Array.isArray(ind.recursos) ? ind.recursos : []
+                        return (
+                          <div key={ind.id || ind.codigo} className="indicator-card">
+                            <div className="indicator-header">
+                              <strong>{ind.codigo}</strong>
+                              <div className="indicator-tags">
                                 <span
                                   className={`badge ${
                                     ind.estado === 'completado'
@@ -201,44 +272,47 @@ function CourseDetailModal({ course, detail, loading, error, onClose }) {
                                   <span className="badge info">{ind.puntuacion} pts</span>
                                 ) : null}
                               </div>
-                              {ind.descripcion ? <p>{ind.descripcion}</p> : null}
-                              {contenidos.length ? (
-                                <ul className="content-list">
-                                  {contenidos.map((contenido) => (
-                                    <li key={contenido.codigo || contenido.titulo}>
-                                      {contenido.codigo ? <span>{contenido.codigo}</span> : null}
-                                      <p>{contenido.titulo}</p>
-                                    </li>
+                            </div>
+                            {ind.descripcion ? <p className="muted">{ind.descripcion}</p> : null}
+                            {contenidos.length ? (
+                              <div className="indicator-content">
+                                <h4>Contenidos del CNB</h4>
+                                <ul>
+                                  {contenidos.map((contenido, idx) => (
+                                    <li key={idx}>{contenido}</li>
                                   ))}
                                 </ul>
-                              ) : null}
+                              </div>
+                            ) : null}
+                            <div className="indicator-resources">
+                              <h4>Recursos recomendados</h4>
                               {recursos.length ? (
-                                <ul className="resource-list compact">
-                                  {recursos.map((resource) => (
-                                    <li key={resource._id || resource.url}>
-                                      <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                                        {resource.titulo || 'Recurso sugerido'}
+                                <ul>
+                                  {recursos.map((recurso) => (
+                                    <li key={recurso._id}>
+                                      <a href={recurso.url} target="_blank" rel="noopener noreferrer">
+                                        <strong>{recurso.titulo}</strong>
+                                        <span>{recurso.tipo}{recurso.proveedor ? ` · ${recurso.proveedor}` : ''}</span>
                                       </a>
-                                      <span className="muted">{resource.tipo || 'Recurso'}</span>
                                     </li>
                                   ))}
                                 </ul>
-                              ) : null}
-                            </li>
-                          )
-                        })}
-                      </ul>
+                              ) : (
+                                <p className="muted">Aún no hay recursos cargados para este indicador.</p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </article>
                   )
-                })
-              ) : (
-                <p className="muted">No hay competencias registradas para este curso.</p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="modal-body"><p>No se encontraron contenidos.</p></div>
-        )}
+                })}
+              </div>
+            </>
+          ) : (
+            <EmptyState title="Área sin contenidos" description="No se encontraron indicadores configurados." />
+          )}
+        </div>
       </div>
     </div>
   )
@@ -337,8 +411,13 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     return () => { mounted = false }
   }, [user?.id, reloadKey])
 
+  const courses = useMemo(() => (Array.isArray(data?.cursos) ? data.cursos : []), [data])
+  const recommendations = useMemo(() => (Array.isArray(data?.recomendaciones) ? data.recomendaciones : []), [data])
+  const notifications = useMemo(() => (Array.isArray(data?.notificaciones) ? data.notificaciones : []), [data])
+  const historyItems = useMemo(() => (Array.isArray(data?.historial) ? data.historial : []), [data])
+
   const summaryCards = useMemo(() => {
-    if (!data) return []
+    if (!data || data.requiresGradeSelection) return []
     const summary = data.summary || {}
     return [
       {
@@ -347,25 +426,36 @@ export default function StudentDashboard({ user, onUserUpdate }) {
           typeof summary.promedioGeneral === 'number'
             ? `${summary.promedioGeneral} pts`
             : 'Sin datos',
-        detail: 'Últimas evaluaciones',
+        subtitle: 'Últimos indicadores evaluados',
+        tone: 'accent',
       },
       {
         title: 'Progreso total',
         value: formatPercent(summary.progresoTotal),
-        detail: `${summary.tareasCompletadas || 0} de ${summary.tareasTotales || 0} indicadores`,
+        subtitle: `${summary.tareasCompletadas || 0} de ${summary.tareasTotales || 0} indicadores`,
       },
       {
         title: 'Tareas completadas',
         value: formatNumber(summary.tareasCompletadas),
-        detail: 'Indicadores completados',
+        subtitle: 'Indicadores finalizados',
       },
       {
         title: 'Tiempo de uso',
         value: formatDuration(summary.tiempoUsoSegundos),
-        detail: `Racha: ${data.usage?.streak || 0} días`,
+        subtitle: `Racha actual: ${data.usage?.streak || 0} días`,
       },
     ]
   }, [data])
+
+  const navItems = useMemo(() => {
+    if (!data || data.requiresGradeSelection) return []
+    return [
+      { id: 'student-overview', label: 'Resumen' },
+      { id: 'student-courses', label: 'Cursos CNB', badge: courses.length },
+      { id: 'student-recommendations', label: 'Recomendaciones', badge: recommendations.length },
+      { id: 'student-activity', label: 'Actividad', badge: historyItems.length },
+    ]
+  }, [data, courses, recommendations, historyItems])
 
   const openCourse = async (course) => {
     setSelectedCourse(course)
@@ -444,143 +534,89 @@ export default function StudentDashboard({ user, onUserUpdate }) {
     )
   }
 
-  const courses = Array.isArray(data.cursos) ? data.cursos : []
-  const notifications = Array.isArray(data.notificaciones) ? data.notificaciones : []
-  const historyItems = Array.isArray(data.historial) ? data.historial : []
-  const recommendations = Array.isArray(data.recomendaciones) ? data.recomendaciones : []
   const attemptsLabel = formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite || 3 })
 
-  return (
-    <div className="dashboard-shell">
-      <header className="dashboard-header">
+  const hero = (
+    <section id="student-overview" className="hero-section student-hero">
+      <div className="hero-main">
         <div>
-          <h2>Panel estudiantil</h2>
-          <p>Hola {data.user?.nombre || user?.name || user?.email}, revisa tu avance del grado {data.user?.grade?.label || ''}.</p>
+          <span className="hero-eyebrow">Panel estudiantil</span>
+          <h2>Hola {data.user?.nombre || user?.name || user?.email}</h2>
+          <p>Revisa tu avance del grado {data.user?.grade?.label || ''} y continúa con tus cursos del CNB.</p>
         </div>
-        <div className="header-stats">
-          <div className="dash-card mini">
-            <span className="card-label">Intentos</span>
-            <strong className="card-value">{attemptsLabel}</strong>
-            <span className="card-detail">Máximo permitido: {data.intentos?.limite || 3}</span>
+        <div className="hero-side">
+          <div className="hero-chip">
+            <span>Intentos</span>
+            <strong>{attemptsLabel}</strong>
+            <small>Máximo permitido: {data.intentos?.limite || 3}</small>
           </div>
-          <div className="dash-card mini">
-            <span className="card-label">Notificaciones</span>
-            <strong className="card-value">{formatNumber(data.summary?.notificacionesNoLeidas)}</strong>
-            <span className="card-detail">Pendientes de revisar</span>
+          <div className="hero-chip">
+            <span>Notificaciones</span>
+            <strong>{formatNumber(data.summary?.notificacionesNoLeidas)}</strong>
+            <small>Pendientes de revisar</small>
           </div>
         </div>
-      </header>
-
-      <section className="summary-grid">
+      </div>
+      <div className="hero-metrics">
         {summaryCards.map((card) => (
-          <SummaryCard key={card.title} {...card} />
+          <StatCard key={card.title} {...card} />
         ))}
-      </section>
+      </div>
+    </section>
+  )
 
-      <section className="grid two">
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Progreso por área</h3>
-              <span className="muted">Indicadores completados vs plan CNB</span>
-            </div>
-          </header>
-          <div className="progress-list">
-            {courses.length ? (
-              courses.map((course) => <ProgressRow key={course.areaId || course.titulo} course={course} />)
-            ) : (
-              <p className="muted">Aún no hay progreso registrado para tu grado.</p>
-            )}
-          </div>
-        </article>
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Tiempo de uso</h3>
-              <span className="muted">Últimos días de actividad</span>
-            </div>
-          </header>
-          <div className="usage-summary">
-            <strong>{formatDuration(data.usage?.totalSeconds)}</strong>
-            <span className="muted">Suma de sesiones</span>
-          </div>
-          {data.usage?.sessions?.length ? <UsageChart usage={data.usage} /> : <p className="muted">Sin sesiones registradas.</p>}
-        </article>
-      </section>
+  return (
+    <>
+      <DashboardLayout user={data.user} roleLabel="Estudiante" navItems={navItems} hero={hero}>
+        <SectionCard
+          id="student-courses"
+          title="Cursos del CNB"
+          description="Áreas oficiales del Currículo Nacional Base para tu grado."
+        >
+          <CourseGrid courses={courses} onSelect={openCourse} />
+        </SectionCard>
 
-      <section className="grid two">
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Tablero de cursos</h3>
-              <span className="muted">Explora los contenidos por área</span>
-            </div>
-          </header>
-          <div className="course-grid">
-            {courses.length ? (
-              courses.map((course) => (
-                <button
-                  key={course.areaId || course.titulo}
-                  className="course-card"
-                  type="button"
-                  onClick={() => openCourse(course)}
-                >
-                  <div className="course-progress">
-                    <span className="pill info">{formatPercent(course.progreso)}</span>
-                    <span>{course.completados} / {course.totalIndicadores} completados</span>
-                  </div>
-                  <strong>{course.titulo}</strong>
-                  {course.siguiente ? (
-                    <span className="muted">Próximo: {course.siguiente.codigo || course.siguiente.descripcion}</span>
-                  ) : (
-                    <span className="muted">Todo al día</span>
-                  )}
-                </button>
-              ))
-            ) : (
-              <p className="muted">No encontramos áreas del CNB configuradas para tu grado.</p>
-            )}
-          </div>
-        </article>
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Recomendaciones personalizadas</h3>
-              <span className="muted">Recursos sugeridos para reforzar</span>
-            </div>
-          </header>
-          <div className="recommendation-grid">
-            {recommendations.length ? (
-              recommendations.map((item) => (
-                <RecommendationBlock key={item.indicadorId || item._id} item={item} />
-              ))
-            ) : (
-              <p className="muted">No hay recomendaciones activas.</p>
-            )}
-          </div>
-        </article>
-      </section>
+        <SectionCard
+          id="student-recommendations"
+          title="Recomendaciones personalizadas"
+          description="Recursos seleccionados según tu progreso y necesidades de refuerzo."
+        >
+          <RecommendationList items={recommendations} />
+        </SectionCard>
 
-      <section className="grid two">
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Notificaciones</h3>
-              <span className="muted">Correos y alertas enviadas</span>
+        <SectionCard
+          id="student-activity"
+          title="Actividad reciente y seguimiento"
+          description="Consulta tu historial, tiempo de uso y notificaciones en un solo lugar."
+        >
+          <div className="activity-grid">
+            <div className="activity-main">
+              <h4>Historial de actividades</h4>
+              <HistoryTimeline items={historyItems} />
             </div>
-          </header>
-          <NotificationList items={notifications} />
-        </article>
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Historial de actividades</h3>
-              <span className="muted">Intentos y acciones recientes</span>
-            </div>
-          </header>
-          <HistoryList items={historyItems} />
-        </article>
-      </section>
+            <aside className="activity-side">
+              <div className="usage-widget">
+                <header>
+                  <strong>Tiempo de uso</strong>
+                  <span className="muted">Racha de {data.usage?.streak || 0} días</span>
+                </header>
+                <div className="usage-summary">
+                  <strong>{formatDuration(data.summary?.tiempoUsoSegundos)}</strong>
+                  <span className="muted">{data.usage?.sessions?.length || 0} sesiones recientes</span>
+                </div>
+                <UsageSpark usage={data.usage} />
+              </div>
+              <div className="notifications-widget">
+                <header>
+                  <strong>Notificaciones</strong>
+                  <span className="muted">Correos y alertas enviadas</span>
+                </header>
+                <NotificationFeed items={notifications} />
+              </div>
+            </aside>
+          </div>
+        </SectionCard>
+      </DashboardLayout>
 
       <CourseDetailModal
         course={selectedCourse}
@@ -589,6 +625,6 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         error={courseError}
         onClose={closeCourse}
       />
-    </div>
+    </>
   )
 }

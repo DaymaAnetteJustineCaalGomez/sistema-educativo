@@ -58,7 +58,7 @@ export const authRequired = async (req, res, next) => {
 
     // Carga mínima del usuario; necesitamos rol y passwordChangedAt para invalidación
     const user = await Usuario.findById(userId)
-      .select('+passwordChangedAt rol nombre email');
+      .select('+passwordChangedAt');
 
     if (!user) return send401(res, 'Token inválido');
 

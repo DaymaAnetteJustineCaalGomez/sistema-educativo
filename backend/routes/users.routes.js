@@ -5,7 +5,8 @@ import { Usuario } from '../models/Usuario.js';
 
 const router = Router();
 
-const SAFE_USER_FIELDS = 'nombre email rol grado createdAt updatedAt';
+const SAFE_USER_PROJECTION =
+  '-password -passwordHash -passwordResetToken -passwordResetExpires -passwordChangedAt';
 
 /**
  * GET /api/users/me
@@ -13,7 +14,7 @@ const SAFE_USER_FIELDS = 'nombre email rol grado createdAt updatedAt';
  */
 router.get('/me', authRequired, async (req, res) => {
   const user = await Usuario.findById(req.user.id)
-    .select(SAFE_USER_FIELDS);
+    .select(SAFE_USER_PROJECTION);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   res.json({ user });
 });
@@ -28,13 +29,13 @@ router.patch('/me', authRequired, async (req, res) => {
   const hasAllowed = allowed.some((key) => Object.prototype.hasOwnProperty.call(req.body, key));
   if (!hasAllowed) {
     const user = await Usuario.findById(req.user.id)
-      .select(SAFE_USER_FIELDS);
+      .select(SAFE_USER_PROJECTION);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     return res.json({ user });
   }
 
   const user = await Usuario.findById(req.user.id)
-    .select(SAFE_USER_FIELDS);
+    .select(SAFE_USER_PROJECTION);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   let touched = false;
@@ -70,7 +71,7 @@ router.patch('/me', authRequired, async (req, res) => {
   }
 
   const fresh = await Usuario.findById(req.user.id)
-    .select(SAFE_USER_FIELDS)
+    .select(SAFE_USER_PROJECTION)
     .lean();
   if (!fresh) return res.status(404).json({ error: 'Usuario no encontrado' });
 

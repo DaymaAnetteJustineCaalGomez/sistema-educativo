@@ -14,6 +14,9 @@ import { getRecommendationsForUser, recursosPorIndicadores } from '../services/r
 
 const router = Router()
 
+const SAFE_USER_PROJECTION =
+  '-password -passwordHash -passwordResetToken -passwordResetExpires -passwordChangedAt'
+
 const gradeNumberToCode = (n) => ({ 1: '1B', 2: '2B', 3: '3B' }[Number(n)] || null)
 const gradeNumberToLabel = (n) => ({ 1: '1ro. Básico', 2: '2do. Básico', 3: '3ro. Básico' }[Number(n)] || 'Sin grado')
 const buildGradeOptions = () =>
@@ -133,7 +136,7 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
     if (!userId) return res.status(400).json({ error: 'Usuario inválido' })
 
     const user = await Usuario.findById(userId)
-      .select('nombre email rol grado createdAt updatedAt')
+      .select(SAFE_USER_PROJECTION)
       .lean()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
@@ -334,7 +337,7 @@ router.get('/student/courses/:areaId', authRequired, allowRoles('ESTUDIANTE'), a
     if (!userId || !areaId) return res.status(400).json({ error: 'Parámetros inválidos' })
 
     const user = await Usuario.findById(userId)
-      .select('nombre email rol grado createdAt updatedAt')
+      .select(SAFE_USER_PROJECTION)
       .lean()
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
@@ -449,7 +452,7 @@ router.get('/student/courses/:areaId', authRequired, allowRoles('ESTUDIANTE'), a
 router.get('/teacher', authRequired, allowRoles('DOCENTE', 'ADMIN'), async (req, res, next) => {
   try {
     const students = await Usuario.find({ rol: 'ESTUDIANTE' })
-      .select('nombre email rol grado createdAt updatedAt')
+      .select(SAFE_USER_PROJECTION)
       .lean()
     if (!students.length) {
       return res.json({
@@ -665,7 +668,7 @@ router.get('/teacher', authRequired, allowRoles('DOCENTE', 'ADMIN'), async (req,
 router.get('/admin', authRequired, allowRoles('ADMIN'), async (req, res, next) => {
   try {
     const users = await Usuario.find()
-      .select('nombre email rol grado createdAt updatedAt')
+      .select(SAFE_USER_PROJECTION)
       .lean()
     const students = users.filter((u) => u.rol === 'ESTUDIANTE')
 

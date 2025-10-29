@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import DashboardLayout, { SectionCard, StatCard, EmptyState } from './DashboardLayout'
 import { api } from '../api'
 import {
   formatDuration,
@@ -8,62 +9,124 @@ import {
   weekdayLabel,
 } from './utils'
 
-function SummaryCard({ title, value, detail }) {
+function UsageSpark({ usage }) {
+  const sessions = Array.isArray(usage?.sessions) ? usage.sessions : []
+  if (!sessions.length) {
+    return <span className="muted">Sin sesiones registradas.</span>
+  }
+  const maxSeconds = Math.max(...sessions.map((s) => Number(s.seconds) || 0), 1)
   return (
-    <div className="dash-card summary-card">
-      <span className="card-label">{title}</span>
-      <strong className="card-value">{value}</strong>
-      {detail ? <span className="card-detail">{detail}</span> : null}
-    </div>
-  )
-}
-
-function UsageChart({ usage }) {
-  if (!usage.sessions?.length) return <p className="muted">Sin sesiones registradas.</p>
-  const maxSeconds = Math.max(...usage.sessions.map((s) => s.seconds), 1)
-  return (
-    <div className="usage-chart">
-      {usage.sessions.map((session) => (
-        <div key={session.date} className="usage-bar">
-          <span className="bar-label">{weekdayLabel(session.date)}</span>
-          <div className="bar-track">
-            <div className="bar-fill" style={{ width: `${(session.seconds / maxSeconds) * 100}%` }} />
+    <div className="usage-spark compact">
+      {sessions.map((session) => (
+        <div key={session.date} className="usage-spark-row">
+          <span className="usage-day">{weekdayLabel(session.date)}</span>
+          <div className="usage-meter">
+            <div
+              className="usage-meter-fill"
+              style={{ width: `${Math.min(100, (session.seconds / maxSeconds) * 100)}%` }}
+            />
           </div>
-          <span className="bar-value">{formatDuration(session.seconds)}</span>
+          <span className="usage-time">{formatDuration(session.seconds)}</span>
         </div>
       ))}
     </div>
   )
 }
 
-function WeakTopics({ items }) {
-  if (!items.length) return <p className="muted">No se detectaron focos débiles recientes.</p>
+function WeakTopicList({ items }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Sin focos débiles"
+        description="Cuando detectemos indicadores con bajo desempeño se mostrarán aquí."
+      />
+    )
+  }
   return (
-    <ul className="pill-list">
+    <ul className="weak-topic-list">
       {items.map((topic) => (
         <li key={topic.indicadorId}>
-          <span className="pill warning">{topic.codigo || 'Indicador'}</span>
-          <span>{topic.descripcion}</span>
-          <span className="muted">Promedio {topic.promedio} pts</span>
+          <div className="weak-topic-main">
+            <strong>{topic.codigo || 'Indicador'}</strong>
+            <p>{topic.descripcion}</p>
+          </div>
+          <div className="weak-topic-meta">
+            <span className="badge warning">Promedio {topic.promedio} pts</span>
+            <span className="badge muted">{topic.completados} completados</span>
+          </div>
         </li>
       ))}
     </ul>
   )
 }
 
-function HistoryTimeline({ items }) {
-  if (!items.length) return <p className="muted">Sin registros recientes.</p>
+function StudentTable({ rows }) {
+  if (!rows.length) {
+    return (
+      <EmptyState
+        title="Sin estudiantes con actividad"
+        description="Cuando tus estudiantes registren progreso aparecerán en este informe."
+      />
+    )
+  }
   return (
-    <ul className="history-list">
+    <div className="table-wrapper">
+      <table className="data-table wide">
+        <thead>
+          <tr>
+            <th>Estudiante</th>
+            <th>Grado</th>
+            <th>Promedio</th>
+            <th>Progreso</th>
+            <th>Completados</th>
+            <th>Abandono</th>
+            <th>Frecuencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((student) => (
+            <tr key={student.id}>
+              <td>{student.nombre}</td>
+              <td>{student.grado}</td>
+              <td>{student.promedio ? `${student.promedio} pts` : '—'}</td>
+              <td>{formatPercent(student.progreso)}</td>
+              <td>{formatNumber(student.completados)}</td>
+              <td>{formatPercent(student.abandono)}</td>
+              <td>{student.frecuencia}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function HistoryTimeline({ items }) {
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Sin registros recientes"
+        description="Cuando los estudiantes completen actividades aparecerán en esta lista."
+      />
+    )
+  }
+  return (
+    <ul className="timeline">
       {items.map((item) => (
         <li key={item.id}>
-          <div className="history-meta">
-            <strong>{item.estudiante?.nombre || 'Estudiante'}</strong>
-            <span className="muted">{formatShortDate(item.fecha)}</span>
+          <div className="timeline-dot" />
+          <div className="timeline-content">
+            <div className="timeline-header">
+              <strong>{item.estudiante?.nombre || 'Estudiante'}</strong>
+              <span className="muted">{formatShortDate(item.fecha)}</span>
+            </div>
+            <p>{item.indicador?.descripcion || item.mensaje || 'Actividad registrada'}</p>
+            <div className="timeline-tags">
+              {item.indicador?.codigo ? <span className="badge info">{item.indicador.codigo}</span> : null}
+              {item.estado ? <span className="badge muted">{item.estado.replace('_', ' ')}</span> : null}
+              {typeof item.puntuacion === 'number' ? <span className="badge info">{item.puntuacion} pts</span> : null}
+            </div>
           </div>
-          <p>{item.indicador?.descripcion || item.mensaje || 'Evento registrado'}</p>
-          {item.indicador?.codigo ? <span className="badge info">{item.indicador.codigo}</span> : null}
-          {item.estado ? <span className="badge muted">{item.estado.replace('_', ' ')}</span> : null}
         </li>
       ))}
     </ul>
@@ -71,18 +134,32 @@ function HistoryTimeline({ items }) {
 }
 
 function RecommendationTimeline({ items }) {
-  if (!items.length) return <p className="muted">Aún no hay recomendaciones enviadas.</p>
+  if (!items.length) {
+    return (
+      <EmptyState
+        title="Sin recomendaciones enviadas"
+        description="Cuando el sistema envíe sugerencias a tus estudiantes se listarán aquí."
+      />
+    )
+  }
   return (
-    <ul className="history-list">
+    <ul className="timeline">
       {items.map((item) => (
         <li key={item.id}>
-          <div className="history-meta">
-            <strong>{item.estudiante?.nombre || 'Sistema'}</strong>
-            <span className="muted">{formatShortDate(item.fecha)}</span>
+          <div className="timeline-dot" />
+          <div className="timeline-content">
+            <div className="timeline-header">
+              <strong>{item.estudiante?.nombre || 'Sistema'}</strong>
+              <span className="muted">{formatShortDate(item.fecha)}</span>
+            </div>
+            <p>{item.mensaje}</p>
+            <div className="timeline-tags">
+              {item.tipo ? <span className="badge info">{item.tipo}</span> : null}
+              <span className={`badge ${item.leida ? 'muted' : 'warning'}`}>
+                {item.leida ? 'Leída' : 'Enviada'}
+              </span>
+            </div>
           </div>
-          <p>{item.mensaje}</p>
-          <span className={`badge ${item.leida ? 'muted' : 'warning'}`}>{item.leida ? 'Leída' : 'Enviada'}</span>
-          {item.tipo ? <span className="badge info">{item.tipo}</span> : null}
         </li>
       ))}
     </ul>
@@ -114,6 +191,49 @@ export default function TeacherDashboard({ user }) {
     return () => { mounted = false }
   }, [user?.id])
 
+  const studentRows = useMemo(() => (Array.isArray(data?.students) ? data.students : []), [data])
+  const weakTopics = useMemo(() => (Array.isArray(data?.weakTopics) ? data.weakTopics : []), [data])
+  const studentHistory = useMemo(() => data?.histories?.students || [], [data])
+  const recommendationHistory = useMemo(() => data?.histories?.recomendaciones || [], [data])
+
+  const summaryMetrics = useMemo(() => {
+    if (!data) return []
+    const summary = data.summary || {}
+    return [
+      {
+        title: 'Promedio general',
+        value: summary.promedioGeneral ? `${summary.promedioGeneral} pts` : 'Sin datos',
+        subtitle: 'Últimos indicadores evaluados',
+        tone: 'accent',
+      },
+      {
+        title: 'Cobertura CNB',
+        value: formatPercent(summary.cobertura),
+        subtitle: 'Avance total vs plan',
+      },
+      {
+        title: 'Progreso promedio',
+        value: formatPercent(summary.progresoPromedio),
+        subtitle: 'Promedio entre estudiantes',
+      },
+      {
+        title: 'Abandono',
+        value: formatPercent(summary.abandono),
+        subtitle: 'Intentos abandonados',
+      },
+    ]
+  }, [data])
+
+  const navItems = useMemo(() => {
+    if (!data) return []
+    return [
+      { id: 'teacher-overview', label: 'Resumen' },
+      { id: 'teacher-report', label: 'Informe estudiantil', badge: studentRows.length },
+      { id: 'teacher-focus', label: 'Focos débiles', badge: weakTopics.length },
+      { id: 'teacher-history', label: 'Historial', badge: studentHistory.length },
+    ]
+  }, [data, studentRows, weakTopics, studentHistory])
+
   if (loading) {
     return (
       <div className="dashboard-shell loading">
@@ -132,122 +252,86 @@ export default function TeacherDashboard({ user }) {
 
   if (!data) return null
 
-  const studentRows = Array.isArray(data?.students) ? data.students : []
-  const summaryCards = [
-    { title: 'Promedio general', value: data.summary?.promedioGeneral ? `${data.summary.promedioGeneral} pts` : 'Sin datos', detail: 'Últimos indicadores evaluados' },
-    { title: 'Cobertura CNB', value: formatPercent(data.summary?.cobertura), detail: 'Avance total vs plan' },
-    { title: 'Progreso promedio', value: formatPercent(data.summary?.progresoPromedio), detail: 'Promedio entre estudiantes' },
-    { title: 'Abandono', value: formatPercent(data.summary?.abandono), detail: 'Intentos abandonados' },
-  ]
+  const hero = (
+    <section id="teacher-overview" className="hero-section teacher-hero">
+      <div className="hero-main">
+        <div>
+          <span className="hero-eyebrow">Panel docente</span>
+          <h2>Bienvenido{user?.name ? `, ${user.name}` : ''}</h2>
+          <p>Acompaña el desempeño de tus estudiantes y detecta focos de atención en tiempo real.</p>
+        </div>
+        <div className="hero-side">
+          <div className="hero-chip">
+            <span>Estudiantes activos</span>
+            <strong>{formatNumber(data.side?.estudiantesActivos)}</strong>
+          </div>
+          <div className="hero-chip">
+            <span>Reportes pendientes</span>
+            <strong>{formatNumber(data.side?.reportesPendientes)}</strong>
+          </div>
+          <div className="hero-chip">
+            <span>Mensajes sin leer</span>
+            <strong>{formatNumber(data.side?.mensajesSinLeer)}</strong>
+          </div>
+        </div>
+      </div>
+      <div className="hero-metrics">
+        {summaryMetrics.map((card) => (
+          <StatCard key={card.title} {...card} />
+        ))}
+      </div>
+    </section>
+  )
 
   return (
-    <div className="dashboard-shell">
-      <header className="dashboard-header">
-        <div>
-          <h2>Panel docente</h2>
-          <p>Acompaña el desempeño de tus estudiantes y detecta focos de atención.</p>
+    <DashboardLayout user={user} roleLabel="Docente" navItems={navItems} hero={hero}>
+      <SectionCard
+        id="teacher-report"
+        title="Informe estudiantil"
+        description="Promedio, progreso y abandono por estudiante de tu grado."
+      >
+        <StudentTable rows={studentRows} />
+      </SectionCard>
+
+      <SectionCard
+        id="teacher-focus"
+        title="Focos débiles y uso"
+        description="Indicadores con menor desempeño y tiempo acumulado en la plataforma."
+      >
+        <div className="teacher-focus-grid">
+          <div className="focus-list">
+            <WeakTopicList items={weakTopics} />
+          </div>
+          <aside className="focus-usage">
+            <header>
+              <strong>Tiempo de uso</strong>
+              <span className="muted">Últimos 7 días</span>
+            </header>
+            <div className="usage-summary">
+              <strong>{formatDuration(data.usage?.totalSeconds)}</strong>
+              <span className="muted">{data.usage?.sessions?.length || 0} sesiones registradas</span>
+            </div>
+            <UsageSpark usage={data.usage || { sessions: [] }} />
+          </aside>
         </div>
-        <div className="header-stats">
-          <div className="dash-card mini">
-            <span className="card-label">Estudiantes activos</span>
-            <strong className="card-value">{formatNumber(data.side?.estudiantesActivos)}</strong>
+      </SectionCard>
+
+      <SectionCard
+        id="teacher-history"
+        title="Historial de estudiantes"
+        description="Consulta actividades recientes y recomendaciones enviadas."
+      >
+        <div className="teacher-history-grid">
+          <div>
+            <h4>Intentos y resultados</h4>
+            <HistoryTimeline items={studentHistory} />
           </div>
-          <div className="dash-card mini">
-            <span className="card-label">Reportes pendientes</span>
-            <strong className="card-value">{formatNumber(data.side?.reportesPendientes)}</strong>
-          </div>
-          <div className="dash-card mini">
-            <span className="card-label">Mensajes sin leer</span>
-            <strong className="card-value">{formatNumber(data.side?.mensajesSinLeer)}</strong>
+          <div>
+            <h4>Recomendaciones enviadas</h4>
+            <RecommendationTimeline items={recommendationHistory} />
           </div>
         </div>
-      </header>
-
-      <section className="summary-grid">
-        {summaryCards.map((card) => (
-          <SummaryCard key={card.title} {...card} />
-        ))}
-      </section>
-
-      <section className="grid two">
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Informe estudiantil</h3>
-              <span className="muted">Promedio, progreso y abandono por estudiante</span>
-            </div>
-          </header>
-          <div className="table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Estudiante</th>
-                  <th>Grado</th>
-                  <th>Promedio</th>
-                  <th>Progreso</th>
-                  <th>Completados</th>
-                  <th>Abandono</th>
-                  <th>Frecuencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {studentRows.length ? (
-                  studentRows.map((student) => (
-                    <tr key={student.id}>
-                      <td>{student.nombre}</td>
-                      <td>{student.grado}</td>
-                      <td>{student.promedio ? `${student.promedio} pts` : '—'}</td>
-                      <td>{formatPercent(student.progreso)}</td>
-                      <td>{formatNumber(student.completados)}</td>
-                      <td>{formatPercent(student.abandono)}</td>
-                      <td>{student.frecuencia}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr className="empty-row">
-                    <td colSpan={7}>No hay estudiantes con actividad registrada todavía.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </article>
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Focos débiles y uso</h3>
-              <span className="muted">Temas que requieren seguimiento y uso semanal</span>
-            </div>
-          </header>
-          <WeakTopics items={data.weakTopics || []} />
-          <div className="usage-summary">
-            <strong>{formatDuration(data.usage?.totalSeconds)}</strong>
-            <span className="muted">Tiempo total registrado</span>
-          </div>
-          <UsageChart usage={data.usage || { sessions: [] }} />
-        </article>
-      </section>
-
-      <section className="grid two">
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Historial de estudiantes</h3>
-              <span className="muted">Intentos y resultados recientes</span>
-            </div>
-          </header>
-          <HistoryTimeline items={data.histories?.students || []} />
-        </article>
-        <article className="dash-card">
-          <header className="section-header">
-            <div>
-              <h3>Historial de recomendaciones</h3>
-              <span className="muted">Acciones enviadas a los alumnos</span>
-            </div>
-          </header>
-          <RecommendationTimeline items={data.histories?.recomendaciones || []} />
-        </article>
-      </section>
-    </div>
+      </SectionCard>
+    </DashboardLayout>
   )
 }
