@@ -127,36 +127,54 @@ function CourseGrid({ courses, onSelect }) {
   }
   return (
     <div className="course-grid">
-      {courses.map((course) => (
-        <button key={course.areaId || course.titulo} type="button" className="course-card" onClick={() => onSelect(course)}>
-          <div className="course-card-header">
-            <strong>{course.titulo}</strong>
-            <span className="pill info">{formatPercent(course.progreso)}</span>
-          </div>
-          <div className="course-card-body">
-            <span>{course.completados} de {course.totalIndicadores} indicadores</span>
-            <div className="course-card-tags">
-              <span className="badge muted">Pendientes {formatNumber(course.pendientes)}</span>
-              {typeof course.enProgreso === 'number' ? (
-                <span className="badge neutral">En progreso {formatNumber(course.enProgreso)}</span>
-              ) : null}
-              {typeof course.promedio === 'number' ? (
-                <span className="badge info">{course.promedio} pts</span>
-              ) : null}
+      {courses.map((course) => {
+        const resume = []
+        if (typeof course.competencias === 'number') {
+          resume.push(`${formatNumber(course.competencias)} competencias`)
+        }
+        if (typeof course.recursos === 'number') {
+          resume.push(`${formatNumber(course.recursos)} recursos`)
+        }
+        return (
+          <article key={course.areaId || course.titulo} className="course-card">
+            <header className="course-card-header">
+              <div>
+                <span className="pill accent">Área CNB</span>
+                <h4>{course.titulo}</h4>
+              </div>
+              <span className="course-progress">{formatPercent(course.progreso)}</span>
+            </header>
+            <p className="course-card-meta">{resume.length ? resume.join(' · ') : 'Plan oficial del grado'}</p>
+            <div className="course-card-body">
+              <p>
+                {formatNumber(course.completados)} de {formatNumber(course.totalIndicadores)} indicadores completados.
+              </p>
+              <div className="course-card-tags">
+                <span className="badge neutral">Pendientes {formatNumber(course.pendientes)}</span>
+                {typeof course.promedio === 'number' ? (
+                  <span className="badge info">{course.promedio} pts</span>
+                ) : null}
+              </div>
+              {course.siguiente ? (
+                <div className="course-card-next">
+                  <span className="muted">Próximo indicador</span>
+                  <strong>{course.siguiente.codigo || course.siguiente.descripcion}</strong>
+                </div>
+              ) : (
+                <div className="course-card-next">
+                  <span className="muted">Área completada</span>
+                  <strong>Sin pendientes</strong>
+                </div>
+              )}
             </div>
-          </div>
-          {course.siguiente ? (
-            <div className="course-card-footer">
-              <span className="muted">Próximo indicador</span>
-              <strong>{course.siguiente.codigo || course.siguiente.descripcion}</strong>
-            </div>
-          ) : (
-            <div className="course-card-footer">
-              <span className="muted">Estás al día en esta área</span>
-            </div>
-          )}
-        </button>
-      ))}
+            <footer className="course-card-footer">
+              <button type="button" className="link-btn" onClick={() => onSelect(course)}>
+                Ver contenidos
+              </button>
+            </footer>
+          </article>
+        )
+      })}
     </div>
   )
 }
@@ -453,6 +471,12 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       typeof summary.indicadoresPendientes === 'number'
         ? summary.indicadoresPendientes
         : Math.max((summary.tareasTotales || 0) - (summary.tareasCompletadas || 0), 0)
+    const attempts = data.intentos || {}
+    const attemptsLabel = formatAttempts({
+      used: attempts.usados,
+      limit: attempts.limite || 3,
+    })
+    const attemptsRemaining = Math.max((attempts.limite || 3) - (attempts.usados || 0), 0)
     const recomendacionesActivas =
       typeof summary.recomendacionesActivas === 'number'
         ? summary.recomendacionesActivas
@@ -470,32 +494,55 @@ export default function StudentDashboard({ user, onUserUpdate }) {
       {
         title: 'Progreso total',
         value: formatPercent(summary.progresoTotal),
-        subtitle: `${summary.tareasCompletadas || 0} de ${summary.tareasTotales || 0} indicadores`,
+        subtitle: `${formatNumber(summary.tareasCompletadas || 0)} de ${formatNumber(summary.tareasTotales || 0)} indicadores`,
       },
       {
         title: 'Indicadores pendientes',
         value: formatNumber(pendientes),
-        subtitle: 'Por completar en tu plan',
+        subtitle: 'Temas por completar en el plan CNB',
+      },
+      {
+        title: 'Intentos disponibles',
+        value: attemptsLabel,
+        subtitle: `${formatNumber(attemptsRemaining)} restantes de ${formatNumber(attempts.limite || 3)}`,
+        tone: 'soft',
       },
       {
         title: 'Recomendaciones activas',
         value: formatNumber(recomendacionesActivas),
-        subtitle: 'Sugerencias personalizadas',
-        tone: 'soft',
+        subtitle: 'Sugerencias listas para reforzar',
       },
     ]
   }, [data])
 
+  const featuredCourse = useMemo(() => {
+    if (!courses.length) return null
+    if (data?.cursoDestacadoId) {
+      const match = courses.find((course) => course.areaId === data.cursoDestacadoId)
+      if (match) return match
+    }
+    const sorted = [...courses].sort((a, b) => {
+      const pendingDiff = (b.pendientes || 0) - (a.pendientes || 0)
+      if (pendingDiff !== 0) return pendingDiff
+      const progressDiff = (a.progreso || 0) - (b.progreso || 0)
+      if (progressDiff !== 0) return progressDiff
+      return (a.titulo || '').localeCompare(b.titulo || '', 'es')
+    })
+    return sorted[0] || null
+  }, [courses, data?.cursoDestacadoId])
+
   const navItems = useMemo(() => {
     if (!data || data.requiresGradeSelection) return []
-    return [
-      { id: 'student-overview', label: 'Resumen' },
-      { id: 'student-courses', label: 'Cursos CNB', badge: courses.length },
-      { id: 'student-recommendations', label: 'Recomendaciones', badge: recommendations.length },
-      { id: 'student-history', label: 'Historial', badge: historyItems.length },
-      { id: 'student-notifications', label: 'Notificaciones', badge: notifications.length },
-    ]
-  }, [data, courses, recommendations, historyItems, notifications])
+    const items = [{ id: 'student-overview', label: 'Inicio' }]
+    if (featuredCourse) {
+      items.push({ id: 'student-featured', label: 'Recomendado' })
+    }
+    items.push({ id: 'student-courses', label: 'Cursos CNB', badge: courses.length })
+    items.push({ id: 'student-recommendations', label: 'Recomendaciones', badge: recommendations.length })
+    items.push({ id: 'student-history', label: 'Historial', badge: historyItems.length })
+    items.push({ id: 'student-notifications', label: 'Notificaciones', badge: notifications.length })
+    return items
+  }, [data, courses, recommendations, historyItems, notifications, featuredCourse])
 
   const openCourse = async (course) => {
     setSelectedCourse(course)
@@ -575,51 +622,31 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   }
 
   const attemptsLabel = formatAttempts({ used: data.intentos?.usados, limit: data.intentos?.limite || 3 })
-  const summary = data.summary || {}
-  const recomendacionesActivas =
-    typeof summary.recomendacionesActivas === 'number'
-      ? summary.recomendacionesActivas
-      : recommendations.length
-  const heroChips = [
-    {
-      label: 'Intentos disponibles',
-      value: attemptsLabel,
-      sub: `Máximo permitido: ${data.intentos?.limite || 3}`,
-    },
-    {
-      label: 'Recomendaciones',
-      value: formatNumber(recomendacionesActivas),
-      sub: 'Contenido sugerido para tu avance',
-    },
-    {
-      label: 'Notificaciones',
-      value: formatNumber(summary.notificacionesNoLeidas),
-      sub: 'Pendientes de revisar',
-    },
-  ]
+  const attemptsRemaining = Math.max((data.intentos?.limite || 3) - (data.intentos?.usados || 0), 0)
 
   const hero = (
-    <section id="student-overview" className="hero-section student-hero">
-      <div className="hero-main">
-        <div>
-          <span className="hero-eyebrow">Panel estudiantil</span>
-          <h2>Hola {data.user?.nombre || user?.name || user?.email}</h2>
-          <p>
-            Revisa tu avance del grado {data.user?.grade?.label || ''} y explora las áreas oficiales del CNB con
-            contenidos, videos y ejercicios alineados a tu nivel.
-          </p>
-        </div>
-        <div className="hero-side">
-          {heroChips.map((chip) => (
-            <div key={chip.label} className="hero-chip">
-              <span>{chip.label}</span>
-              <strong>{chip.value}</strong>
-              {chip.sub ? <small>{chip.sub}</small> : null}
-            </div>
-          ))}
+    <section id="student-overview" className="student-hero">
+      <div className="student-hero__copy">
+        <span className="hero-eyebrow">Panel estudiantil</span>
+        <h1>Mis cursos CNB · {data.user?.grade?.label}</h1>
+        <p>
+          Explora las áreas oficiales del Currículo Nacional Base de Guatemala con videos, ejercicios y contenidos
+          organizados por competencias para tu grado.
+        </p>
+        <div className="hero-summary">
+          <div>
+            <span className="muted">Intentos disponibles</span>
+            <strong>{attemptsLabel}</strong>
+            <small>{formatNumber(attemptsRemaining)} restantes</small>
+          </div>
+          <div>
+            <span className="muted">Recomendaciones activas</span>
+            <strong>{formatNumber(recommendations.length)}</strong>
+            <small>Preparadas para ti</small>
+          </div>
         </div>
       </div>
-      <div className="hero-metrics">
+      <div className="student-hero__stats">
         {summaryCards.map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
@@ -630,10 +657,54 @@ export default function StudentDashboard({ user, onUserUpdate }) {
   return (
     <>
       <DashboardLayout user={data.user} roleLabel="Estudiante" navItems={navItems} hero={hero}>
+        {featuredCourse ? (
+          <SectionCard
+            id="student-featured"
+            title="Recomendado para ti"
+            description={`Prioridad sugerida según tus indicadores pendientes. Te quedan ${formatNumber(
+              attemptsRemaining,
+            )} intentos disponibles.`}
+          >
+            <div className="featured-course">
+              <div className="featured-course__copy">
+                <span className="pill accent">Área sugerida</span>
+                <h3>{featuredCourse.titulo}</h3>
+                <p>
+                  {featuredCourse.pendientes > 0
+                    ? `Te faltan ${formatNumber(featuredCourse.pendientes)} indicadores para completar esta área.`
+                    : 'Has completado todos los indicadores de esta área.'}
+                </p>
+                <div className="featured-course__tags">
+                  <span className="badge neutral">{formatNumber(featuredCourse.competencias)} competencias</span>
+                  <span className="badge neutral">{formatNumber(featuredCourse.recursos)} recursos</span>
+                  {typeof featuredCourse.promedio === 'number' ? (
+                    <span className="badge info">{featuredCourse.promedio} pts</span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="featured-course__actions">
+                <div className="featured-course__next">
+                  <span className="muted">
+                    {featuredCourse.siguiente ? 'Próximo indicador' : 'Área completada'}
+                  </span>
+                  <strong>
+                    {featuredCourse.siguiente
+                      ? featuredCourse.siguiente.codigo || featuredCourse.siguiente.descripcion
+                      : 'Sin pendientes'}
+                  </strong>
+                </div>
+                <button type="button" className="primary-btn" onClick={() => openCourse(featuredCourse)}>
+                  Ver contenidos
+                </button>
+              </div>
+            </div>
+          </SectionCard>
+        ) : null}
+
         <SectionCard
           id="student-courses"
           title="Cursos del CNB"
-          description="Áreas oficiales del Currículo Nacional Base para tu grado."
+          description="Selecciona un área para explorar competencias, temas, videos, ejercicios y contenidos relacionados."
         >
           <CourseGrid courses={courses} onSelect={openCourse} />
         </SectionCard>
@@ -641,15 +712,15 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         <SectionCard
           id="student-recommendations"
           title="Recomendaciones personalizadas"
-          description="Recursos seleccionados según tu progreso y necesidades de refuerzo."
+          description="Recursos oficiales y actividades sugeridas con base en tu progreso y tus intentos recientes."
         >
           <RecommendationList items={recommendations} />
         </SectionCard>
 
         <SectionCard
           id="student-history"
-          title="Historial de actividad"
-          description="Tus últimos intentos, logros y avances registrados."
+          title="Últimos intentos"
+          description="Revisa tus actividades más recientes y el estado de cada indicador evaluado."
         >
           <HistoryTimeline items={historyItems} />
         </SectionCard>
@@ -657,7 +728,7 @@ export default function StudentDashboard({ user, onUserUpdate }) {
         <SectionCard
           id="student-notifications"
           title="Notificaciones y recordatorios"
-          description="Mensajes enviados a tu correo y dentro de la plataforma."
+          description="Mensajes importantes enviados a tu correo y dentro de la plataforma."
         >
           <NotificationFeed items={notifications} />
         </SectionCard>

@@ -162,8 +162,41 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
     const indicatorMap = new Map(planIndicators.map((ind) => [String(ind._id), ind]))
 
     const areaIds = unique(planIndicators.map((ind) => String(ind.areaId || '')))
+    const areaObjIds = areaIds.map((id) => toObjectId(id)).filter(Boolean)
     const areas = areaIds.length ? await CNBArea.find({ _id: { $in: areaIds } }).lean() : []
     const areaMap = new Map(areas.map((area) => [String(area._id), area]))
+
+    const competenciasDocs = areaObjIds.length
+      ? await CNBCompetencia.find({ areaId: { $in: areaObjIds }, grado: gradeCode }).lean()
+      : []
+    const competenciasPorArea = new Map()
+    for (const comp of competenciasDocs) {
+      const key = comp.areaId ? String(comp.areaId) : null
+      if (!key) continue
+      if (!competenciasPorArea.has(key)) competenciasPorArea.set(key, [])
+      competenciasPorArea.get(key).push(comp)
+    }
+
+    const indicatorIds = planIndicators.map((ind) => ind._id)
+    const recursosPorArea = new Map()
+    if (indicatorIds.length) {
+      const recursos = await recursosPorIndicadores(indicatorIds)
+      for (const recurso of recursos) {
+        const resourceId = String(recurso._id)
+        const candidates = [
+          recurso.indicadorId ? String(recurso.indicadorId) : null,
+          ...(Array.isArray(recurso.indicadorIds) ? recurso.indicadorIds.map((id) => String(id)) : []),
+        ].filter(Boolean)
+        const uniqueIndicators = [...new Set(candidates)]
+        for (const indicatorId of uniqueIndicators) {
+          const indicator = indicatorMap.get(String(indicatorId))
+          if (!indicator || !indicator.areaId) continue
+          const areaKey = String(indicator.areaId)
+          if (!recursosPorArea.has(areaKey)) recursosPorArea.set(areaKey, new Set())
+          recursosPorArea.get(areaKey).add(resourceId)
+        }
+      }
+    }
 
     const progress = await Progreso.find({ usuarioId: userId }).lean()
     const progressMap = new Map(progress.map((p) => [String(p.indicadorId), p]))
@@ -275,6 +308,8 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
     for (const [areaId, stats] of areaStats.entries()) {
       const area = areaMap.get(areaId)
       const promedioArea = stats.scoreCount ? +(stats.scoreSum / stats.scoreCount).toFixed(2) : null
+      const competencias = competenciasPorArea.get(areaId) || []
+      const recursosSet = recursosPorArea.get(areaId)
       courses.push({
         areaId,
         titulo: area?.nombre || 'Área sin nombre',
@@ -285,9 +320,23 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
         promedio: promedioArea,
         progreso: stats.total ? +((stats.completados / stats.total) * 100).toFixed(2) : 0,
         siguiente: stats.nextIndicator,
+        competencias: competencias.length,
+        recursos: recursosSet ? recursosSet.size : 0,
       })
     }
     courses.sort((a, b) => a.titulo.localeCompare(b.titulo, 'es'))
+
+    let featuredCourseId = null
+    if (courses.length) {
+      const sorted = [...courses].sort((a, b) => {
+        const pendingDiff = (b.pendientes || 0) - (a.pendientes || 0)
+        if (pendingDiff !== 0) return pendingDiff
+        const progressDiff = (a.progreso || 0) - (b.progreso || 0)
+        if (progressDiff !== 0) return progressDiff
+        return a.titulo.localeCompare(b.titulo, 'es')
+      })
+      featuredCourseId = sorted[0]?.areaId || null
+    }
 
     const history = buildHistoryFromAttempts(attempts, indicatorMap)
 
@@ -315,6 +364,7 @@ router.get('/student', authRequired, allowRoles('ESTUDIANTE'), async (req, res, 
         notificacionesNoLeidas: notifications.filter((n) => !n.leida).length,
       },
       cursos: courses,
+      cursoDestacadoId: featuredCourseId,
       recomendaciones: recommendationsEnriched,
       historial: history,
       notificaciones: notifications,
