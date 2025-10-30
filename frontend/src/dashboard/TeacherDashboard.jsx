@@ -10,6 +10,69 @@ function escapePdfText(value) {
     .replace(/\)/g, '\\)');
 }
 
+function approximateTextWidth(text, fontSize) {
+  const averageCharWidth = fontSize * 0.55;
+  return text.length * averageCharWidth;
+}
+
+function wrapTextInColumn(value, fontSize, maxWidth) {
+  if (value === null || value === undefined) return ['—'];
+  const stringValue = String(value);
+  if (stringValue.trim() === '') return ['—'];
+  if (stringValue === '—') return ['—'];
+
+  const words = stringValue.split(/\s+/).filter(Boolean);
+  const lines = [];
+
+  const pushLine = (line) => {
+    if (line && line.trim()) {
+      lines.push(line.trim());
+    }
+  };
+
+  let currentLine = '';
+  const maxAllowedWidth = Math.max(maxWidth, fontSize * 1.5);
+
+  words.forEach((word) => {
+    const wordWidth = approximateTextWidth(word, fontSize);
+    if (wordWidth > maxAllowedWidth) {
+      if (currentLine) {
+        pushLine(currentLine);
+        currentLine = '';
+      }
+
+      let segment = '';
+      for (const char of word) {
+        const nextSegment = segment + char;
+        if (approximateTextWidth(nextSegment, fontSize) > maxAllowedWidth && segment) {
+          pushLine(segment);
+          segment = char;
+        } else {
+          segment = nextSegment;
+        }
+      }
+      currentLine = segment;
+      return;
+    }
+
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (approximateTextWidth(candidate, fontSize) <= maxAllowedWidth) {
+      currentLine = candidate;
+    } else {
+      pushLine(currentLine);
+      currentLine = word;
+    }
+  });
+
+  pushLine(currentLine);
+
+  if (!lines.length) {
+    return ['—'];
+  }
+
+  return lines;
+}
+
 function buildTeacherReportPdf({ teacherName, history }) {
   const title = 'Informe estudiantil';
   const subtitle = 'Currículo Nacional Base · Guatemala';
@@ -23,12 +86,11 @@ function buildTeacherReportPdf({ teacherName, history }) {
   const systemStamp = `Sistema: ${systemName}`;
   const pageWidth = 842; // A4 landscape
   const pageHeight = 595;
-  const marginX = 64;
-  const marginBottom = 60;
-  const bannerHeight = 126;
-  const bannerBottom = pageHeight - bannerHeight;
-  const rowHeight = 42;
-  const tableHeaderHeight = rowHeight + 24;
+  const marginX = 60;
+  const marginBottom = 62;
+  const headerHeight = 142;
+  const bannerTop = pageHeight - headerHeight;
+  const tableHeaderHeight = 64;
   const textBlocks = [];
 
   const tableLeft = marginX;
@@ -36,14 +98,14 @@ function buildTeacherReportPdf({ teacherName, history }) {
   const tableWidth = tableRight - tableLeft;
 
   const columns = [
-    { label: 'Estudiante', accessor: 'name', weight: 2.5 },
-    { label: 'Promedio', accessor: 'average', weight: 1.05 },
-    { label: 'Cobertura', accessor: 'coverage', weight: 1.05 },
-    { label: 'Progreso', accessor: 'progress', weight: 1.05 },
-    { label: 'Completados', accessor: 'completions', weight: 1.1 },
-    { label: 'Abandono', accessor: 'dropout', weight: 1.05 },
-    { label: 'Foco débil', accessor: 'focus', weight: 1.45 },
-    { label: 'Frecuencia', accessor: 'frequency', weight: 1.15 },
+    { label: 'Estudiante', accessor: 'name', weight: 2.6, fontSize: 15, color: '0.1 0.16 0.3', fontKey: 'F2' },
+    { label: 'Promedio', accessor: 'average', weight: 1.1, fontSize: 14 },
+    { label: 'Cobertura', accessor: 'coverage', weight: 1.05, fontSize: 14 },
+    { label: 'Progreso', accessor: 'progress', weight: 1.05, fontSize: 14 },
+    { label: 'Completados', accessor: 'completions', weight: 1.05, fontSize: 14 },
+    { label: 'Abandono', accessor: 'dropout', weight: 1.05, fontSize: 14 },
+    { label: 'Foco débil', accessor: 'focus', weight: 1.55, fontSize: 14 },
+    { label: 'Frecuencia', accessor: 'frequency', weight: 1.25, fontSize: 14 },
   ];
 
   const totalWeight = columns.reduce((sum, col) => sum + col.weight, 0);
@@ -51,10 +113,11 @@ function buildTeacherReportPdf({ teacherName, history }) {
   columns.forEach((col, index) => {
     const isLast = index === columns.length - 1;
     const computedWidth = (tableWidth * col.weight) / totalWeight;
-    const width = isLast ? tableRight - runningX : Math.max(computedWidth, 72);
+    const width = isLast ? tableRight - runningX : Math.max(computedWidth, 80);
     col.width = width;
     col.startX = runningX;
     col.textX = Math.round(runningX + 14);
+    col.textMaxWidth = Math.max(width - 24, 40);
     runningX += col.width;
   });
 
@@ -81,62 +144,93 @@ function buildTeacherReportPdf({ teacherName, history }) {
     textBlocks.push('1 w');
   };
 
-  // Background and banner
-  drawRect(0, 0, pageWidth, pageHeight, '0.96 0.97 0.99');
-  drawRect(0, bannerBottom, pageWidth, bannerHeight, '0.41 0.59 0.87');
+  // Background and header banner
+  drawRect(0, 0, pageWidth, pageHeight, '0.965 0.975 0.99');
+  drawRect(0, bannerTop, pageWidth, headerHeight, '0.33 0.53 0.86');
+  drawRect(0, bannerTop + headerHeight / 2, pageWidth, headerHeight / 2, '0.28 0.47 0.78');
 
-  const bannerTitleY = bannerBottom + bannerHeight - 52;
-  addText(systemName, marginX, bannerTitleY + 40, 20, '1 1 1', 'F2');
-  addText(title, marginX, bannerTitleY + 12, 30, '1 1 1', 'F2');
-  addText(subtitle, marginX, bannerTitleY - 18, 17, '1 1 1');
+  const bannerTitleY = bannerTop + headerHeight - 46;
+  addText(systemName, marginX, bannerTitleY + 30, 22, '1 1 1', 'F2');
+  addText(title, marginX, bannerTitleY, 32, '1 1 1', 'F2');
+  addText(subtitle, marginX, bannerTitleY - 28, 17, '1 1 1');
 
-  const metaStartY = bannerBottom - 38;
-  addText(generatedFor, marginX, metaStartY, 15, '0.09 0.14 0.27', 'F2');
-  addText(generatedOn, marginX, metaStartY - 24, 14);
-  addText(systemStamp, marginX, metaStartY - 48, 14);
+  const metaStartY = bannerTop - 34;
+  addText(generatedFor, marginX, metaStartY, 16, '0.12 0.2 0.36', 'F2');
+  addText(generatedOn, marginX, metaStartY - 26, 15);
+  addText(systemStamp, marginX, metaStartY - 50, 15);
 
-  const tableTop = metaStartY - 64;
-  const tableHeaderBottom = tableTop - tableHeaderHeight;
+  const tableTop = metaStartY - 70;
   const tableBottom = marginBottom;
+  const tableHeight = tableTop - tableBottom;
+  const tableFrameLeft = tableLeft - 24;
+  const tableFrameWidth = tableWidth + 48;
 
-  drawRect(tableLeft - 24, tableBottom - 20, tableWidth + 48, tableTop - tableBottom + 60, '1 1 1');
-  drawRect(tableLeft, tableHeaderBottom, tableWidth, tableHeaderHeight, '0.88 0.92 0.97');
-  drawLine(tableLeft, tableTop, tableRight, tableTop, '0.55 0.65 0.82', 1.2);
-  drawLine(tableLeft, tableHeaderBottom, tableRight, tableHeaderBottom, '0.72 0.79 0.91', 1);
+  drawRect(tableFrameLeft, tableBottom - 26, tableFrameWidth, tableHeight + 74, '1 1 1');
+  drawRect(tableFrameLeft, tableTop + 16, tableFrameWidth, 18, '0.85 0.9 0.97');
+  drawRect(tableLeft, tableTop - tableHeaderHeight, tableWidth, tableHeaderHeight, '0.88 0.92 0.97');
+  drawLine(tableLeft, tableTop, tableRight, tableTop, '0.54 0.63 0.8', 1.4);
+  drawLine(tableLeft, tableTop - tableHeaderHeight, tableRight, tableTop - tableHeaderHeight, '0.72 0.79 0.91', 1.1);
 
   columns.forEach((col, index) => {
     if (index > 0) {
-      drawLine(col.startX, tableBottom, col.startX, tableTop, '0.85 0.88 0.94', 0.9);
+      drawLine(col.startX, tableBottom, col.startX, tableTop, '0.84 0.87 0.93', 1);
     }
-    addText(col.label, col.textX, tableTop - 26, 16, '0.12 0.22 0.39', 'F2');
+    addText(col.label, col.textX, tableTop - 26, 17, '0.14 0.24 0.41', 'F2');
   });
-  drawLine(tableRight, tableBottom, tableRight, tableTop, '0.65 0.7 0.8');
+  drawLine(tableRight, tableBottom, tableRight, tableTop, '0.62 0.69 0.82', 1);
 
-  let rowTop = tableHeaderBottom;
+  let rowTop = tableTop - tableHeaderHeight;
+  const rowPaddingY = 12;
+  const lineHeight = 18;
+
   history.forEach((row, rowIndex) => {
-    const nextRowBottom = rowTop - rowHeight;
+    const cellLayouts = columns.map((col) => {
+      const value = row[col.accessor] ?? '—';
+      const fontSize = col.fontSize || 14;
+      const lines = wrapTextInColumn(value, fontSize, col.textMaxWidth);
+      return {
+        lines,
+        fontKey: col.fontKey || 'F1',
+        color: col.color || '0 0 0',
+        fontSize,
+      };
+    });
+
+    const maxLines = cellLayouts.reduce((max, cell) => Math.max(max, cell.lines.length), 1);
+    const computedHeight = Math.max(rowPaddingY * 2 + maxLines * lineHeight, 44);
+    const nextRowBottom = rowTop - computedHeight;
+
     if (nextRowBottom < tableBottom) {
       return;
     }
 
     if (rowIndex % 2 === 0) {
-      drawRect(tableLeft, nextRowBottom, tableWidth, rowHeight, '0.95 0.97 1');
+      drawRect(tableLeft, nextRowBottom, tableWidth, computedHeight, '0.95 0.97 1');
     }
 
-    const baseline = nextRowBottom + rowHeight - 14;
-    columns.forEach((col) => {
-      const value = row[col.accessor] ?? '—';
-      const fontKey = col.accessor === 'name' ? 'F2' : 'F1';
-      const color = col.accessor === 'name' ? '0.08 0.12 0.24' : '0 0 0';
-      addText(value, col.textX, baseline, 14, color, fontKey);
+    columns.forEach((col, index) => {
+      const cell = cellLayouts[index];
+      let textY = rowTop - rowPaddingY - 4;
+      cell.lines.forEach((line) => {
+        addText(line, col.textX, textY, cell.fontSize, cell.color, cell.fontKey);
+        textY -= lineHeight;
+      });
     });
 
+    drawLine(tableLeft, nextRowBottom, tableRight, nextRowBottom, '0.78 0.82 0.9', 0.9);
     rowTop = nextRowBottom;
   });
 
-  drawLine(tableLeft, tableBottom, tableRight, tableBottom, '0.72 0.79 0.91', 1);
+  drawLine(tableLeft, tableBottom, tableRight, tableBottom, '0.72 0.79 0.91', 1.1);
 
-  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 12, '0.25 0.25 0.32', 'F2');
+  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 30, 13, '0.28 0.28 0.34', 'F2');
+  addText(
+    'Generado automáticamente desde el panel docente del Sistema Educativo.',
+    marginX,
+    marginBottom - 52,
+    12,
+    '0.38 0.38 0.45',
+  );
 
   const content = textBlocks.join('\n');
   const encoder = new TextEncoder();
@@ -156,7 +250,7 @@ function buildTeacherReportPdf({ teacherName, history }) {
 
   let pdf = '%PDF-1.4\n';
   const offsets = ['0000000000 65535 f \n'];
-  objects.forEach((obj, index) => {
+  objects.forEach((obj) => {
     const offset = pdf.length;
     offsets.push(String(offset).padStart(10, '0') + ' 00000 n \n');
     pdf += `${obj}\n`;
