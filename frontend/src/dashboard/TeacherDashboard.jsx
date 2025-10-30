@@ -24,55 +24,103 @@ function buildTeacherReportPdf({ teacherName, history }) {
   const pageWidth = 842; // A4 landscape
   const pageHeight = 595;
   const marginX = 60;
-  const headerTop = pageHeight - 64;
-  const subtitleTop = headerTop - 24;
-  const generatedTop = subtitleTop - 18;
-  const lineHeight = 18;
-  let currentY = generatedTop - lineHeight * 3 - 16;
+  const marginBottom = 60;
+  const bannerHeight = 120;
+  const bannerBottom = pageHeight - bannerHeight;
+  const rowHeight = 26;
+  const tableHeaderHeight = rowHeight + 6;
+  const textBlocks = [];
 
   const columns = [
-    { label: 'Estudiante', accessor: 'name', width: 180 },
-    { label: 'Promedio', accessor: 'average', width: 70 },
-    { label: 'Cobertura', accessor: 'coverage', width: 70 },
-    { label: 'Progreso', accessor: 'progress', width: 70 },
-    { label: 'Completados', accessor: 'completions', width: 80 },
-    { label: 'Abandono', accessor: 'dropout', width: 70 },
-    { label: 'Foco débil', accessor: 'focus', width: 110 },
-    { label: 'Frecuencia', accessor: 'frequency', width: 72 },
+    { label: 'Estudiante', accessor: 'name', width: 190 },
+    { label: 'Promedio', accessor: 'average', width: 80 },
+    { label: 'Cobertura', accessor: 'coverage', width: 80 },
+    { label: 'Progreso', accessor: 'progress', width: 80 },
+    { label: 'Completados', accessor: 'completions', width: 90 },
+    { label: 'Abandono', accessor: 'dropout', width: 80 },
+    { label: 'Foco débil', accessor: 'focus', width: 130 },
+    { label: 'Frecuencia', accessor: 'frequency', width: 82 },
   ];
 
   let currentX = marginX;
   columns.forEach((col) => {
-    col.x = currentX;
+    col.x = currentX + 8;
     currentX += col.width;
   });
 
-  const textBlocks = [
-    `BT /F1 18 Tf ${marginX} ${headerTop} Td (${escapePdfText(`${systemName} · ${title}`)}) Tj ET`,
-    `BT /F1 12 Tf ${marginX} ${subtitleTop} Td (${escapePdfText(subtitle)}) Tj ET`,
-    `BT /F1 11 Tf ${marginX} ${generatedTop} Td (${escapePdfText(generatedFor)}) Tj ET`,
-    `BT /F1 11 Tf ${marginX} ${generatedTop - lineHeight} Td (${escapePdfText(generatedOn)}) Tj ET`,
-    `BT /F1 11 Tf ${marginX} ${generatedTop - lineHeight * 2} Td (${escapePdfText(systemStamp)}) Tj ET`,
-  ];
-
-  textBlocks.push(`${marginX} ${currentY + lineHeight} m ${pageWidth - marginX} ${currentY + lineHeight} l S`);
-
-  const writeRow = (row, { bold = false } = {}) => {
-    if (currentY < marginX) return;
-    const fontSize = bold ? 12 : 11;
-    columns.forEach((col) => {
-      const value = bold ? col.label : row[col.accessor];
-      textBlocks.push(
-        `BT /F1 ${fontSize} Tf ${col.x} ${currentY} Td (${escapePdfText(value ?? '—')}) Tj ET`,
-      );
-    });
-    currentY -= lineHeight;
+  const addText = (text, x, y, size = 12, color = '0 0 0') => {
+    textBlocks.push(`${color} rg`);
+    textBlocks.push(`BT /F1 ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfText(text)}) Tj ET`);
+    if (color !== '0 0 0') {
+      textBlocks.push('0 0 0 rg');
+    }
   };
 
-  writeRow({}, { bold: true });
-  history.forEach((row) => {
-    writeRow(row);
+  const drawRect = (x, y, width, height, fillColor) => {
+    textBlocks.push(`${fillColor} rg`);
+    textBlocks.push(`${x} ${y} ${width} ${height} re f`);
+    textBlocks.push('0 0 0 rg');
+  };
+
+  const drawLine = (x1, y1, x2, y2, color = '0.65 0.7 0.8', width = 1) => {
+    textBlocks.push(`${color} RG`);
+    textBlocks.push(`${width} w`);
+    textBlocks.push(`${x1} ${y1} m ${x2} ${y2} l S`);
+    textBlocks.push('0 0 0 RG');
+    textBlocks.push('1 w');
+  };
+
+  // Background and banner
+  drawRect(0, 0, pageWidth, pageHeight, '0.97 0.98 1');
+  drawRect(0, bannerBottom, pageWidth, bannerHeight, '0.46 0.63 0.89');
+
+  const bannerTitleY = bannerBottom + bannerHeight - 40;
+  addText(systemName, marginX, bannerTitleY + 32, 16, '1 1 1');
+  addText(title, marginX, bannerTitleY + 10, 24, '1 1 1');
+  addText(subtitle, marginX, bannerTitleY - 12, 14, '1 1 1');
+
+  const metaStartY = bannerBottom - 32;
+  addText(generatedFor, marginX, metaStartY, 12);
+  addText(generatedOn, marginX, metaStartY - 18, 12);
+  addText(systemStamp, marginX, metaStartY - 36, 12);
+
+  const tableTop = metaStartY - 54;
+  const tableOuterTop = tableTop + rowHeight + 14;
+  const tableBottom = marginBottom;
+  const tableBackgroundWidth = pageWidth - 2 * (marginX - 20);
+  drawRect(marginX - 20, tableBottom, tableBackgroundWidth, tableOuterTop - tableBottom, '1 1 1');
+
+  const tableHeaderBottom = tableTop - tableHeaderHeight;
+  const headerWidth = pageWidth - 2 * (marginX - 4);
+  drawRect(marginX - 4, tableHeaderBottom, headerWidth, tableHeaderHeight, '0.89 0.92 0.97');
+  drawLine(marginX - 4, tableOuterTop, pageWidth - (marginX - 4), tableOuterTop, '0.65 0.7 0.8');
+  drawLine(marginX - 4, tableHeaderBottom, pageWidth - (marginX - 4), tableHeaderBottom);
+
+  columns.forEach((col, index) => {
+    if (index > 0) {
+      const dividerX = col.x - 8;
+      drawLine(dividerX, tableBottom, dividerX, tableTop, '0.85 0.88 0.94', 0.8);
+    }
+    addText(col.label, col.x, tableTop - 18, 12, '0.2 0.32 0.53');
   });
+
+  let currentY = tableTop - rowHeight - 6;
+  history.forEach((row, rowIndex) => {
+    if (currentY < marginBottom + 12) return;
+    const isEven = rowIndex % 2 === 0;
+    if (isEven) {
+      drawRect(marginX - 4, currentY - 6, pageWidth - (marginX - 4) * 2, rowHeight, '0.96 0.97 1');
+    }
+    columns.forEach((col) => {
+      const value = row[col.accessor] ?? '—';
+      addText(value, col.x, currentY, 11);
+    });
+    currentY -= rowHeight;
+  });
+
+  drawLine(marginX - 4, tableBottom, pageWidth - (marginX - 4), tableBottom);
+
+  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 10, '0.35 0.35 0.4');
 
   const content = textBlocks.join('\n');
   const encoder = new TextEncoder();
