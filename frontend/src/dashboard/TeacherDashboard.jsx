@@ -27,8 +27,8 @@ function buildTeacherReportPdf({ teacherName, history }) {
   const marginBottom = 58;
   const bannerHeight = 118;
   const bannerBottom = pageHeight - bannerHeight;
-  const rowHeight = 28;
-  const tableHeaderHeight = rowHeight + 12;
+  const rowHeight = 34;
+  const tableHeaderHeight = rowHeight + 14;
   const textBlocks = [];
 
   const tableLeft = marginX;
@@ -58,9 +58,9 @@ function buildTeacherReportPdf({ teacherName, history }) {
     runningX += col.width;
   });
 
-  const addText = (text, x, y, size = 12, color = '0 0 0') => {
+  const addText = (text, x, y, size = 12, color = '0 0 0', fontKey = 'F1') => {
     textBlocks.push(`${color} rg`);
-    textBlocks.push(`BT /F1 ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfText(text)}) Tj ET`);
+    textBlocks.push(`BT /${fontKey} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfText(text)}) Tj ET`);
     if (color !== '0 0 0') {
       textBlocks.push('0 0 0 rg');
     }
@@ -84,21 +84,21 @@ function buildTeacherReportPdf({ teacherName, history }) {
   drawRect(0, 0, pageWidth, pageHeight, '0.97 0.98 1');
   drawRect(0, bannerBottom, pageWidth, bannerHeight, '0.46 0.63 0.89');
 
-  const bannerTitleY = bannerBottom + bannerHeight - 44;
-  addText(systemName, marginX, bannerTitleY + 34, 16, '1 1 1');
-  addText(title, marginX, bannerTitleY + 12, 24, '1 1 1');
-  addText(subtitle, marginX, bannerTitleY - 10, 14, '1 1 1');
+  const bannerTitleY = bannerBottom + bannerHeight - 46;
+  addText(systemName, marginX, bannerTitleY + 36, 18, '1 1 1', 'F2');
+  addText(title, marginX, bannerTitleY + 12, 26, '1 1 1', 'F2');
+  addText(subtitle, marginX, bannerTitleY - 12, 16, '1 1 1');
 
   const metaStartY = bannerBottom - 34;
-  addText(generatedFor, marginX, metaStartY, 12);
-  addText(generatedOn, marginX, metaStartY - 18, 12);
-  addText(systemStamp, marginX, metaStartY - 36, 12);
+  addText(generatedFor, marginX, metaStartY, 13, '0 0 0', 'F2');
+  addText(generatedOn, marginX, metaStartY - 20, 12);
+  addText(systemStamp, marginX, metaStartY - 40, 12);
 
-  const tableTop = metaStartY - 60;
+  const tableTop = metaStartY - 68;
   const tableHeaderBottom = tableTop - tableHeaderHeight;
   const tableBottom = marginBottom;
 
-  drawRect(tableLeft - 18, tableBottom - 16, tableWidth + 36, tableTop - tableBottom + 42, '1 1 1');
+  drawRect(tableLeft - 18, tableBottom - 16, tableWidth + 36, tableTop - tableBottom + 46, '1 1 1');
   drawRect(tableLeft, tableHeaderBottom, tableWidth, tableHeaderHeight, '0.89 0.92 0.97');
   drawLine(tableLeft, tableTop, tableRight, tableTop, '0.65 0.7 0.8');
   drawLine(tableLeft, tableHeaderBottom, tableRight, tableHeaderBottom, '0.75 0.8 0.9');
@@ -107,7 +107,7 @@ function buildTeacherReportPdf({ teacherName, history }) {
     if (index > 0) {
       drawLine(col.startX, tableBottom, col.startX, tableTop, '0.85 0.88 0.94', 0.8);
     }
-    addText(col.label, col.textX, tableTop - 20, 12, '0.2 0.32 0.53');
+    addText(col.label, col.textX, tableTop - 22, 13, '0.14 0.24 0.42', 'F2');
   });
   drawLine(tableRight, tableBottom, tableRight, tableTop, '0.65 0.7 0.8');
 
@@ -122,10 +122,10 @@ function buildTeacherReportPdf({ teacherName, history }) {
       drawRect(tableLeft, nextRowBottom, tableWidth, rowHeight, '0.96 0.97 1');
     }
 
-    const baseline = nextRowBottom + rowHeight - 10;
+    const baseline = nextRowBottom + rowHeight - 11;
     columns.forEach((col) => {
       const value = row[col.accessor] ?? '—';
-      addText(value, col.textX, baseline, 11);
+      addText(value, col.textX, baseline, 12);
     });
 
     rowTop = nextRowBottom;
@@ -133,7 +133,7 @@ function buildTeacherReportPdf({ teacherName, history }) {
 
   drawLine(tableLeft, tableBottom, tableRight, tableBottom, '0.75 0.8 0.9');
 
-  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 10, '0.35 0.35 0.4');
+  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 11, '0.28 0.28 0.32');
 
   const content = textBlocks.join('\n');
   const encoder = new TextEncoder();
@@ -143,12 +143,13 @@ function buildTeacherReportPdf({ teacherName, history }) {
   objects.push('1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj');
   objects.push('2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj');
   objects.push(
-    `3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj`,
+    `3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >> endobj`,
   );
   objects.push(
     `4 0 obj << /Length ${contentBytes.length} >> stream\n${content}\nendstream\nendobj`,
   );
   objects.push('5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj');
+  objects.push('6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj');
 
   let pdf = '%PDF-1.4\n';
   const offsets = ['0000000000 65535 f \n'];
