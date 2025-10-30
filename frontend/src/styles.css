@@ -500,9 +500,9 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .toggle--on .toggle__indicator{ background:#22c55e }
 .toggle--off{ background:#fff; color:var(--dash-muted) }
 
-.dashboard-modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:120; padding:24px }
-.dashboard-modal__backdrop{ position:absolute; inset:0; background:rgba(15,23,42,.62); backdrop-filter:blur(6px) }
-.dashboard-modal__content{ position:relative; background:rgba(248,250,252,.98); border-radius:28px; border:1px solid rgba(99,102,241,.22); padding:clamp(24px,4vw,36px); max-width:860px; width:100%; max-height:90vh; overflow:auto; box-shadow:0 28px 80px rgba(15,23,42,.35) }
+.dashboard-modal{ position:fixed; inset:0; display:flex; align-items:flex-start; justify-content:center; z-index:120; padding:clamp(24px,4vw,48px) 24px 24px; overflow-y:auto }
+.dashboard-modal__backdrop{ position:fixed; inset:0; background:rgba(15,23,42,.62); backdrop-filter:blur(6px); z-index:-1 }
+.dashboard-modal__content{ position:relative; margin:0 auto; background:rgba(248,250,252,.98); border-radius:28px; border:1px solid rgba(99,102,241,.22); padding:clamp(24px,4vw,36px); max-width:860px; width:100%; max-height:85vh; overflow:auto; box-shadow:0 28px 80px rgba(15,23,42,.35); z-index:1 }
 .dashboard-modal__header{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px }
 .dashboard-modal__eyebrow{ margin:0 0 6px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--dash-muted) }
 .dashboard-modal__header h2{ margin:0; font-size:24px }
