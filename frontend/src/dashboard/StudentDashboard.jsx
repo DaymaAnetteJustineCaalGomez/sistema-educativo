@@ -228,113 +228,150 @@ function StudentRecommendations({ latest, history, sectionId }) {
   );
 }
 
-function CourseContentDialog({
-  open,
-  course,
-  content,
-  loading,
-  error,
-  onClose,
-  onRetry,
-}) {
-  if (!open) return null;
+function CourseContentPage({ course, content, loading, error, onBack, onRetry }) {
+  if (!course) return null;
 
   const title = course?.titulo || course?.area || 'Área sin nombre';
+  const description =
+    content?.descripcion || course?.descripcion || `Recursos disponibles para ${title}.`;
+  const competencias = Array.isArray(content?.competencias) ? content.competencias : [];
   const topics = Array.isArray(content?.temas) ? content.temas : [];
   const generalActivities = Array.isArray(content?.actividades) ? content.actividades : [];
   const courseVideos = content?.recursos?.videos || [];
   const courseLecturas = content?.recursos?.lecturas || [];
   const courseCuestionarios =
     content?.recursos?.cuestionarios || content?.recursos?.ejercicios || [];
+  const totalRecursos = courseVideos.length + courseLecturas.length + courseCuestionarios.length;
 
   return (
-    <div className="dashboard-modal" role="dialog" aria-modal="true" aria-labelledby="curso-detalle-titulo">
-      <div className="dashboard-modal__backdrop" onClick={onClose} />
-      <div className="dashboard-modal__content">
-        <header className="dashboard-modal__header">
-          <div>
-            <p className="dashboard-modal__eyebrow">Contenidos del CNB</p>
-            <h2 id="curso-detalle-titulo">{title}</h2>
+    <div className="course-page">
+      <section className="course-page__hero">
+        <button type="button" className="course-page__back" onClick={onBack}>
+          ← Volver al tablero
+        </button>
+        <div className="course-page__hero-body">
+          <p className="course-page__eyebrow">Contenidos del CNB</p>
+          <h1>{title}</h1>
+          <p>{description}</p>
+        </div>
+        <div className="course-page__hero-metrics">
+          <div className="course-page__metric">
+            <span className="course-page__metric-label">Competencias</span>
+            <span className="course-page__metric-value">{competencias.length}</span>
           </div>
-          <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar">
-            ×
-          </button>
-        </header>
-
-        {loading ? <p className="dashboard-modal__status">Cargando contenidos...</p> : null}
-        {error ? (
-          <div className="dashboard-modal__status dashboard-modal__status--error">
-            <p>{error}</p>
-            <button type="button" className="btn-secondary" onClick={onRetry}>
-              Reintentar
-            </button>
+          <div className="course-page__metric">
+            <span className="course-page__metric-label">Recursos</span>
+            <span className="course-page__metric-value">{totalRecursos}</span>
           </div>
-        ) : null}
+        </div>
+      </section>
 
-        {!loading && !error && content ? (
-          <div className="course-detail">
-            <section>
-              <h3>Descripción</h3>
-              <p>{content.descripcion}</p>
-            </section>
+      <div className="course-page__layout">
+        <aside className="course-page__sidebar">
+          <nav aria-label="Navegación del contenido">
+            <h2>Secciones</h2>
+            <ul>
+              <li>
+                <a href="#course-descripcion">Descripción</a>
+              </li>
+              <li>
+                <a href="#course-competencias">Competencias</a>
+              </li>
+              <li>
+                <a href="#course-temas">Temas</a>
+              </li>
+              <li>
+                <a href="#course-recursos">Recursos</a>
+              </li>
+              <li>
+                <a href="#course-actividades">Actividades</a>
+              </li>
+              <li>
+                <a href="#course-retro">Retroalimentación</a>
+              </li>
+            </ul>
+          </nav>
+          <div className="course-page__summary">
+            <h3>Resumen rápido</h3>
+            <p>
+              Explora los recursos alineados al Currículo Nacional Base, revisa los temas y completa las
+              actividades para avanzar con seguridad.
+            </p>
+          </div>
+        </aside>
 
-            <section>
-              <h3>Competencias</h3>
-              {content.competencias?.length ? (
-                <ul>
-                  {content.competencias.map((item) => (
-                    <li key={item.id || item.codigo}>
-                      <strong>{item.codigo}</strong>
-                      <span>{item.enunciado}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="student-empty">Aún no hay competencias registradas para este grado.</p>
-              )}
-            </section>
+        <main className="course-page__content">
+          {loading ? (
+            <div className="course-page__status">Cargando contenidos...</div>
+          ) : error ? (
+            <div className="course-page__status course-page__status--error">
+              <p>{error}</p>
+              <button type="button" className="btn-secondary" onClick={onRetry}>
+                Reintentar
+              </button>
+            </div>
+          ) : !content ? (
+            <div className="course-page__status">No se encontraron detalles para este curso.</div>
+          ) : (
+            <>
+              <section id="course-descripcion" className="course-page__section">
+                <h2>Descripción del curso</h2>
+                <p>{description}</p>
+              </section>
 
-            <section className="course-detail__topics">
-              <h3>Temas y subtemas</h3>
-              {topics.length ? (
-                <div className="course-topics">
-                  {topics.map((topic, index) => {
-                    const videos = topic?.recursos?.videos || [];
-                    const lecturas = topic?.recursos?.lecturas || [];
-                    const cuestionarios = topic?.recursos?.cuestionarios || [];
-                    return (
-                      <article className="course-topic" key={topic.id || topic.titulo || index}>
-                        <div className="course-topic__header">
-                          <h4>{topic.titulo}</h4>
-                          {topic.codigo ? <span className="course-topic__code">{topic.codigo}</span> : null}
-                        </div>
+              <section id="course-competencias" className="course-page__section">
+                <h2>Competencias</h2>
+                {competencias.length ? (
+                  <ul className="course-page__list course-page__list--competencias">
+                    {competencias.map((item) => (
+                      <li key={item.id || item.codigo || item.enunciado}>
+                        {item.codigo ? <strong>{item.codigo}</strong> : null}
+                        <span>{item.enunciado}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="student-empty">Aún no hay competencias registradas para este grado.</p>
+                )}
+              </section>
 
-                        {topic.subtitulos?.length ? (
-                          <div className="course-topic__subtopics">
-                            <h5>Subtemas</h5>
-                            <ul>
-                              {topic.subtitulos.map((sub) => (
-                                <li key={sub}>{sub}</li>
-                              ))}
-                            </ul>
+              <section id="course-temas" className="course-page__section">
+                <h2>Temas y subtemas</h2>
+                {topics.length ? (
+                  <div className="course-topics">
+                    {topics.map((topic, index) => {
+                      const videos = topic?.recursos?.videos || [];
+                      const lecturas = topic?.recursos?.lecturas || [];
+                      const cuestionarios = topic?.recursos?.cuestionarios || [];
+                      return (
+                        <article className="course-topic" key={topic.id || topic.titulo || index}>
+                          <div className="course-topic__header">
+                            <h3>{topic.titulo}</h3>
+                            {topic.codigo ? <span className="course-topic__code">{topic.codigo}</span> : null}
                           </div>
-                        ) : null}
 
-                        <div className="course-topic__resources">
-                          <h5>Recursos recomendados</h5>
-                          <div className="course-topic__resource-groups">
-                            <div>
-                              <span className="resource-pill">Videos</span>
+                          {topic.subtitulos?.length ? (
+                            <div className="course-topic__subtopics">
+                              <h4>Subtemas</h4>
+                              <ul>
+                                {topic.subtitulos.map((sub) => (
+                                  <li key={sub}>{sub}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+
+                          <div className="course-topic__resources">
+                            <div className="course-topic__resource-group">
+                              <h4>Videos</h4>
                               {videos.length ? (
                                 <ul>
                                   {videos.map((video) => (
                                     <li key={video.title}>
-                                      <div>
-                                        <span className="resource-title">{video.title}</span>
-                                        {video.duration ? (
-                                          <span className="resource-meta">{video.duration}</span>
-                                        ) : null}
-                                      </div>
+                                      <span className="resource-title">{video.title}</span>
+                                      {video.duration ? (
+                                        <span className="resource-meta">{video.duration}</span>
+                                      ) : null}
                                       <a
                                         href={video.url}
                                         target="_blank"
@@ -347,21 +384,20 @@ function CourseContentDialog({
                                   ))}
                                 </ul>
                               ) : (
-                                <p className="student-empty">Agrega videos desde el CNB.</p>
+                                <p className="student-empty">Agrega videos recomendados para complementar este tema.</p>
                               )}
                             </div>
-                            <div>
-                              <span className="resource-pill">Lecturas</span>
+
+                            <div className="course-topic__resource-group">
+                              <h4>Lecturas</h4>
                               {lecturas.length ? (
                                 <ul>
                                   {lecturas.map((item) => (
                                     <li key={item.title}>
-                                      <div>
-                                        <span className="resource-title">{item.title}</span>
-                                        {item.description ? (
-                                          <span className="resource-meta">{item.description}</span>
-                                        ) : null}
-                                      </div>
+                                      <span className="resource-title">{item.title}</span>
+                                      {item.description ? (
+                                        <span className="resource-meta">{item.description}</span>
+                                      ) : null}
                                       <a
                                         href={item.url}
                                         target="_blank"
@@ -374,19 +410,18 @@ function CourseContentDialog({
                                   ))}
                                 </ul>
                               ) : (
-                                <p className="student-empty">Agrega lecturas desde tu biblioteca.</p>
+                                <p className="student-empty">Incluye lecturas o guías de apoyo para reforzar este contenido.</p>
                               )}
                             </div>
-                            <div>
-                              <span className="resource-pill">Cuestionarios</span>
+
+                            <div className="course-topic__resource-group">
+                              <h4>Cuestionarios</h4>
                               {cuestionarios.length ? (
                                 <ul>
                                   {cuestionarios.map((item) => (
                                     <li key={item.title}>
-                                      <div>
-                                        <span className="resource-title">{item.title}</span>
-                                        {item.type ? <span className="resource-meta">{item.type}</span> : null}
-                                      </div>
+                                      <span className="resource-title">{item.title}</span>
+                                      {item.type ? <span className="resource-meta">{item.type}</span> : null}
                                       <a
                                         href={item.url}
                                         target="_blank"
@@ -403,125 +438,125 @@ function CourseContentDialog({
                               )}
                             </div>
                           </div>
-                        </div>
 
-                        {topic.actividades?.length ? (
-                          <div className="course-topic__activities">
-                            <h5>Actividades sugeridas</h5>
-                            <ul>
-                              {topic.actividades.map((activity) => (
-                                <li key={activity.descripcion}>
-                                  <strong>{activity.tipo}</strong>
-                                  <span>{activity.descripcion}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
+                          {topic.actividades?.length ? (
+                            <div className="course-topic__activities">
+                              <h4>Actividades sugeridas</h4>
+                              <ul>
+                                {topic.actividades.map((activity) => (
+                                  <li key={activity.descripcion}>
+                                    <strong>{activity.tipo}</strong>
+                                    <span>{activity.descripcion}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
 
-                        {topic.retroalimentacion ? (
-                          <div className="course-topic__feedback">
-                            <h5>Retroalimentación</h5>
-                            <p>{topic.retroalimentacion}</p>
-                          </div>
-                        ) : null}
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="student-empty">Pronto verás los temas del CNB organizados aquí.</p>
-              )}
-            </section>
-
-            <section className="course-detail__resources">
-              <h3>Recursos del curso</h3>
-              <div className="course-detail__resource-columns">
-                <div>
-                  <h4>Videos</h4>
-                  {courseVideos.length ? (
-                    <ul>
-                      {courseVideos.map((video) => (
-                        <li key={video.title}>
-                          <div>
-                            <span className="resource-title">{video.title}</span>
-                            {video.duration ? <span className="resource-meta">{video.duration}</span> : null}
-                          </div>
-                          <a href={video.url} target="_blank" rel="noreferrer" className="link-inline">
-                            Ver video
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="student-empty">Pronto encontrarás videos sugeridos aquí.</p>
-                  )}
-                </div>
-                <div>
-                  <h4>Lecturas y guías</h4>
-                  {courseLecturas.length ? (
-                    <ul>
-                      {courseLecturas.map((item) => (
-                        <li key={item.title}>
-                          <div>
-                            <span className="resource-title">{item.title}</span>
-                            {item.description ? <span className="resource-meta">{item.description}</span> : null}
-                          </div>
-                          <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
-                            Abrir recurso
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="student-empty">Agrega lecturas y guías desde tu biblioteca.</p>
-                  )}
-                </div>
-                <div>
-                  <h4>Cuestionarios</h4>
-                  {courseCuestionarios.length ? (
-                    <ul>
-                      {courseCuestionarios.map((item) => (
-                        <li key={item.title}>
-                          <div>
-                            <span className="resource-title">{item.title}</span>
-                            {item.type ? <span className="resource-meta">{item.type}</span> : null}
-                          </div>
-                          <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
-                            Resolver
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="student-empty">Integra evaluaciones y prácticas desde tu plan de clase.</p>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {generalActivities.length ? (
-              <section className="course-detail__activities">
-                <h3>Actividades de seguimiento</h3>
-                <ul>
-                  {generalActivities.map((activity, index) => (
-                    <li key={activity.descripcion || index}>
-                      <strong>{activity.tipo}</strong>
-                      <span>{activity.descripcion}</span>
-                    </li>
-                  ))}
-                </ul>
+                          {topic.retroalimentacion ? (
+                            <div className="course-topic__feedback">
+                              <h4>Retroalimentación</h4>
+                              <p>{topic.retroalimentacion}</p>
+                            </div>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="student-empty">Pronto verás los temas del CNB organizados aquí.</p>
+                )}
               </section>
-            ) : null}
 
-            {content.retroalimentacion ? (
-              <section className="course-detail__feedback">
-                <h3>Retroalimentación recomendada</h3>
-                <p>{content.retroalimentacion}</p>
+              <section id="course-recursos" className="course-page__section">
+                <h2>Recursos del curso</h2>
+                <div className="course-detail__resource-columns">
+                  <div>
+                    <h3>Videos</h3>
+                    {courseVideos.length ? (
+                      <ul>
+                        {courseVideos.map((video) => (
+                          <li key={video.title}>
+                            <div>
+                              <span className="resource-title">{video.title}</span>
+                              {video.duration ? <span className="resource-meta">{video.duration}</span> : null}
+                            </div>
+                            <a href={video.url} target="_blank" rel="noreferrer" className="link-inline">
+                              Ver video
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="student-empty">Pronto encontrarás videos sugeridos aquí.</p>
+                    )}
+                  </div>
+                  <div>
+                    <h3>Lecturas y guías</h3>
+                    {courseLecturas.length ? (
+                      <ul>
+                        {courseLecturas.map((item) => (
+                          <li key={item.title}>
+                            <div>
+                              <span className="resource-title">{item.title}</span>
+                              {item.description ? <span className="resource-meta">{item.description}</span> : null}
+                            </div>
+                            <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
+                              Abrir recurso
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="student-empty">Agrega lecturas y guías desde tu biblioteca.</p>
+                    )}
+                  </div>
+                  <div>
+                    <h3>Cuestionarios</h3>
+                    {courseCuestionarios.length ? (
+                      <ul>
+                        {courseCuestionarios.map((item) => (
+                          <li key={item.title}>
+                            <div>
+                              <span className="resource-title">{item.title}</span>
+                              {item.type ? <span className="resource-meta">{item.type}</span> : null}
+                            </div>
+                            <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
+                              Resolver
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="student-empty">Integra evaluaciones y prácticas desde tu plan de clase.</p>
+                    )}
+                  </div>
+                </div>
               </section>
-            ) : null}
-          </div>
-        ) : null}
+
+              {generalActivities.length ? (
+                <section id="course-actividades" className="course-page__section">
+                  <h2>Actividades de seguimiento</h2>
+                  <ul className="course-page__list">
+                    {generalActivities.map((activity, index) => (
+                      <li key={activity.descripcion || index}>
+                        <strong>{activity.tipo}</strong>
+                        <span>{activity.descripcion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {content.retroalimentacion ? (
+                <section id="course-retro" className="course-page__section">
+                  <h2>Retroalimentación recomendada</h2>
+                  <p>{content.retroalimentacion}</p>
+                </section>
+              ) : null}
+            </>
+          )}
+        </main>
       </div>
     </div>
   );
@@ -534,8 +569,7 @@ function StudentCourseGrid({
   onRefresh,
   onViewContent,
   sectionId,
-  activeCourseId,
-  contentLoading,
+  loadingCourseId,
 }) {
   let content = null;
 
@@ -567,7 +601,7 @@ function StudentCourseGrid({
                 type="button"
                 className="course-card__button"
                 onClick={() => onViewContent?.(course)}
-                disabled={contentLoading && activeCourseId === (course?._id || course?.slug)}
+                disabled={loadingCourseId === (course?._id || course?.slug || title)}
               >
                 Ver contenido
               </button>
@@ -624,6 +658,8 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     user?.notificacionesEmail ?? user?.emailNotifications ?? true,
   );
+  const [viewMode, setViewMode] = useState('dashboard');
+  const [loadingCourseId, setLoadingCourseId] = useState(null);
 
   const average = useMemo(() => {
     if (!courses.length) return 0;
@@ -699,15 +735,20 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
   const handleLoadContent = useCallback(
     async (course) => {
       if (!course) return;
+
+      const courseId = course?._id || course?.slug || course?.area || course?.titulo;
+      setViewMode('course');
       setActiveCourse(course);
       setCourseContent(null);
       setCourseContentError('');
       setCourseContentLoading(true);
+      setLoadingCourseId(courseId || null);
 
       const areaId = course?._id || course?.slug;
       if (!areaId) {
         setCourseContentError('No se pudo identificar el curso seleccionado.');
         setCourseContentLoading(false);
+        setLoadingCourseId(null);
         return;
       }
 
@@ -798,16 +839,19 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
         setCourseContentError(err.message || 'No se pudieron cargar los contenidos.');
       } finally {
         setCourseContentLoading(false);
+        setLoadingCourseId(null);
       }
     },
     [grado],
   );
 
-  const handleCloseContent = useCallback(() => {
+  const handleBackToDashboard = useCallback(() => {
+    setViewMode('dashboard');
     setActiveCourse(null);
     setCourseContent(null);
     setCourseContentError('');
     setCourseContentLoading(false);
+    setLoadingCourseId(null);
   }, []);
 
   const handleRetryContent = useCallback(() => {
@@ -815,6 +859,22 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
       handleLoadContent(activeCourse);
     }
   }, [activeCourse, handleLoadContent]);
+
+  if (viewMode === 'course' && activeCourse) {
+    return (
+      <div className="dashboard dashboard--student">
+        <DashboardHeader user={user} badge={gradeLabel} onLogout={onLogout} />
+        <CourseContentPage
+          course={activeCourse}
+          content={courseContent}
+          loading={courseContentLoading}
+          error={courseContentError}
+          onBack={handleBackToDashboard}
+          onRetry={handleRetryContent}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard dashboard--student">
@@ -864,8 +924,7 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
             error={error}
             onRefresh={handleRefresh}
             onViewContent={handleLoadContent}
-            activeCourseId={activeCourse ? activeCourse._id || activeCourse.slug : null}
-            contentLoading={courseContentLoading}
+            loadingCourseId={loadingCourseId}
           />
 
           <StudentMetrics sectionId="metricas" metrics={metrics} />
@@ -883,15 +942,6 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
           />
         </main>
       </div>
-      <CourseContentDialog
-        open={Boolean(activeCourse)}
-        course={activeCourse}
-        content={courseContent}
-        loading={courseContentLoading}
-        error={courseContentError}
-        onClose={handleCloseContent}
-        onRetry={handleRetryContent}
-      />
     </div>
   );
 }
