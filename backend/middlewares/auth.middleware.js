@@ -35,7 +35,10 @@ function send403(res, msg = 'No autorizado') {
 
 export const authRequired = async (req, res, next) => {
   try {
-    const secret = process.env.JWT_SECRET || 'change_me';
+    if (!process.env.JWT_SECRET) {
+      // Configuración faltante en el servidor
+      return res.status(500).json({ error: 'Falta JWT_SECRET en el .env' });
+    }
 
     const token = getTokenFromRequest(req);
     if (!token) return send401(res, 'Token requerido');
@@ -43,7 +46,7 @@ export const authRequired = async (req, res, next) => {
     // Valida firma y expiración
     let payload;
     try {
-      payload = jwt.verify(token, secret /* , { clockTolerance: 5 } */);
+      payload = jwt.verify(token, process.env.JWT_SECRET /* , { clockTolerance: 5 } */);
       // payload esperado: { id, iat, exp, ... }
     } catch (e) {
       // Diferencia entre expirado y malformado
@@ -53,12 +56,12 @@ export const authRequired = async (req, res, next) => {
       return send401(res, 'Token inválido');
     }
 
-    const userId = payload?.id || payload?.uid || payload?.userId || payload?.sub;
-    if (!userId) return send401(res, 'Token inválido');
+    const payloadId = payload?.id || payload?.uid || payload?.userId;
+    if (!payloadId) return send401(res, 'Token inválido');
 
     // Carga mínima del usuario; necesitamos rol y passwordChangedAt para invalidación
-    const user = await Usuario.findById(userId)
-      .select('+passwordChangedAt');
+    const user = await Usuario.findById(payloadId)
+      .select('+passwordChangedAt rol nombre email');
 
     if (!user) return send401(res, 'Token inválido');
 
@@ -76,6 +79,7 @@ export const authRequired = async (req, res, next) => {
       rol: user.rol,
       nombre: user.nombre,
       email: user.email,
+      grado: user.grado ?? null,
     };
     req.auth = payload; // por si necesitas iat/exp en otra capa
     return next();

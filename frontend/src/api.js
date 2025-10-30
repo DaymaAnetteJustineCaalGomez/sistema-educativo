@@ -1,36 +1,39 @@
-// Toma la URL base del backend desde .env, y si no existe usa localhost:5002
-let fallback = 'http://localhost:5002'
-if (typeof window !== 'undefined' && window.location) {
-  const { protocol, hostname, port } = window.location
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    const apiPort = port === '' || port === '5173' ? '5002' : port
-    fallback = `${protocol}//${hostname}:${apiPort}`
-  } else {
-    fallback = `${protocol}//${hostname}${port ? `:${port}` : ''}`
+// Toma la URL base del backend desde .env y cae en un valor por defecto funcional
+const inferBaseUrl = () => {
+  const envBase = (import.meta?.env?.VITE_API_BASE || '').trim();
+  if (envBase) return envBase.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location;
+    if (port === '5173' || port === '4173') {
+      return `${protocol}//${hostname}:5002`;
+    }
+    return `${protocol}//${hostname}${port ? `:${port}` : ''}`.replace(/\/+$/, '');
   }
-}
 
-const envBase = (import.meta.env.VITE_API_BASE || '').trim()
-const BASE = (envBase.length ? envBase : fallback).replace(/\/+$/, '')
+  return 'http://localhost:5002';
+};
+
+const BASE = inferBaseUrl();
 const PREFIX = '/api/auth'
-const DASHBOARD_PREFIX = '/api/dashboard'
+const CNB_PREFIX = '/api/cnb'
 
-const TOKEN_KEY = 'sistema-educativo.token'
+const TOKEN_KEY = 'sistema-educativo-token'
 
-const tokenStore = {
-  get() {
-    if (typeof window === 'undefined') return null
-    try { return window.localStorage.getItem(TOKEN_KEY) } catch { return null }
-  },
-  set(token) {
-    if (typeof window === 'undefined') return
-    try {
-      if (token) window.localStorage.setItem(TOKEN_KEY, token)
-      else window.localStorage.removeItem(TOKEN_KEY)
-    } catch {}
-  },
-  clear() { this.set(null) }
+const safeStorage = typeof window !== 'undefined' ? window.localStorage : null
+
+export const getToken = () => {
+  try { return safeStorage?.getItem(TOKEN_KEY) || null } catch { return null }
 }
+
+export const setToken = (token) => {
+  try {
+    if (!token) safeStorage?.removeItem(TOKEN_KEY)
+    else safeStorage?.setItem(TOKEN_KEY, token)
+  } catch {}
+}
+
+export const clearToken = () => setToken(null)
 
 // Nombres alineados a tu backend (según auth.routes.js):
 // - request-register-code
@@ -47,15 +50,26 @@ export const API = {
 }
 
 async function fetchJSON(url, opts = {}) {
-  const token = tokenStore.get()
+  const { body, headers, ...rest } = opts || {}
+  const finalHeaders = { ...(headers || {}) }
+
+  if (body && !(body instanceof FormData) && typeof body !== 'string') {
+    finalHeaders['Content-Type'] = finalHeaders['Content-Type'] || 'application/json'
+  }
+
+  const token = getToken()
+  if (token) finalHeaders['Authorization'] = `Bearer ${token}`
+
+  const finalBody =
+    body && !(body instanceof FormData) && typeof body !== 'string'
+      ? JSON.stringify(body)
+      : body
+
   const res = await fetch(url, {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(opts.headers || {})
-    },
-    ...opts
+    headers: finalHeaders,
+    body: finalBody,
+    ...rest
   })
   let data = null
   try { data = await res.json() } catch {}
@@ -66,18 +80,20 @@ async function fetchJSON(url, opts = {}) {
   return data
 }
 
+const withSignalOption = (options) => {
+  if (!options) return {}
+  if (typeof AbortSignal !== 'undefined' && options instanceof AbortSignal) {
+    return { signal: options }
+  }
+  return options
+}
+
 export const api = {
-  sendCode: (email, role) => fetchJSON(API.sendCode, { method: 'POST', body: JSON.stringify({ email, role }) }),
-  register: (payload)     => fetchJSON(API.register, { method: 'POST', body: JSON.stringify(payload) }),
-  login:    (email, password) => fetchJSON(API.login, { method: 'POST', body: JSON.stringify({ email, password }) }),
+  sendCode: (email, role) => fetchJSON(API.sendCode, { method: 'POST', body: { email, role } }),
+  register: (payload)     => fetchJSON(API.register, { method: 'POST', body: payload }),
+  login:    (email, password) => fetchJSON(API.login, { method: 'POST', body: { email, password } }),
   me:       () => fetchJSON(API.me),
-  forgotPassword: (email) => fetchJSON(`${BASE}${PREFIX}/forgot-password`, { method: 'POST', body: JSON.stringify({ email }) }),
-  resetPassword: (token, password) => fetchJSON(`${BASE}${PREFIX}/reset-password`, { method: 'POST', body: JSON.stringify({ token, password }) }),
-  studentDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/student`),
-  studentCourseDetail: (courseId) => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/student/courses/${courseId}`),
-  teacherDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/teacher`),
-  adminDashboard: () => fetchJSON(`${BASE}${DASHBOARD_PREFIX}/admin`),
-  updateProfile: (payload) => fetchJSON(`${BASE}/api/users/me`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  storeToken: tokenStore,
+  cursosBasico: (grado = 1, options) =>
+    fetchJSON(`${BASE}${CNB_PREFIX}/basico/${grado}/cursos`, withSignalOption(options)),
   // logout:   () => fetchJSON(API.logout, { method:'POST' }),
 }
