@@ -10,15 +10,6 @@ function formatPercentage(value) {
   return `${Math.round(number)}%`;
 }
 
-function formatTimeFromMinutes(minutes) {
-  if (!minutes || Number.isNaN(minutes) || minutes < 0) return 'Sin registro';
-  const hrs = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
-  if (hrs === 0) return `${mins} min`;
-  if (mins === 0) return `${hrs} h`;
-  return `${hrs} h ${mins} min`;
-}
-
 function resolveCourseAverage(course) {
   const candidates = [
     course?.promedioGeneral,
@@ -35,9 +26,9 @@ function resolveCourseAverage(course) {
   return 0;
 }
 
-function StudentMetrics({ metrics }) {
+function StudentMetrics({ metrics, sectionId }) {
   return (
-    <section className="student-section student-section--metrics">
+    <section id={sectionId} className="student-section student-section--metrics">
       {metrics.map((metric) => (
         <article className="metric-card" key={metric.label}>
           <div className="metric-card__label">{metric.label}</div>
@@ -49,9 +40,9 @@ function StudentMetrics({ metrics }) {
   );
 }
 
-function StudentRecommendations({ latest, history }) {
+function StudentRecommendations({ latest, history, sectionId }) {
   return (
-    <section className="student-section student-section--recommendations">
+    <section id={sectionId} className="student-section student-section--recommendations">
       <div className="student-recommendations__main">
         <div className="student-recommendations__pill">Recomendación destacada</div>
         <h2>{latest?.title || 'Completa tus cursos para recibir recomendaciones'}</h2>
@@ -84,7 +75,7 @@ function StudentRecommendations({ latest, history }) {
   );
 }
 
-function StudentCourseGrid({ courses, loading, error, onRefresh }) {
+function StudentCourseGrid({ courses, loading, error, onRefresh, sectionId }) {
   let content = null;
 
   if (loading) {
@@ -122,7 +113,7 @@ function StudentCourseGrid({ courses, loading, error, onRefresh }) {
   }
 
   return (
-    <section className="student-section student-section--courses">
+    <section id={sectionId} className="student-section student-section--courses">
       <div className="section-header">
         <div>
           <h2>Tablero de cursos</h2>
@@ -137,9 +128,9 @@ function StudentCourseGrid({ courses, loading, error, onRefresh }) {
   );
 }
 
-function StudentLimits({ attemptsLeft, totalAttempts, history }) {
+function StudentLimits({ attemptsLeft, totalAttempts, history, sectionId }) {
   return (
-    <section className="student-section student-section--limits">
+    <section id={sectionId} className="student-section student-section--limits">
       <div className="student-limits__attempts">
         <h3>Intentos disponibles</h3>
         <p>
@@ -196,13 +187,6 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
     );
   }, [courses, user]);
 
-  const usageMinutes = useMemo(() => {
-    if (user?.minutosUso) return Number(user.minutosUso);
-    if (user?.tiempoUsoMinutos) return Number(user.tiempoUsoMinutos);
-    if (user?.tiempoUsoHoras) return Number(user.tiempoUsoHoras) * 60;
-    return null;
-  }, [user]);
-
   const latestRecommendation = useMemo(() => {
     const recs = user?.recomendaciones ?? user?.recommendations ?? [];
     if (Array.isArray(recs) && recs.length) {
@@ -255,11 +239,6 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
       value: tasksCompleted ? `${tasksCompleted}` : '—',
       hint: 'Actividades que has entregado con éxito.',
     },
-    {
-      label: 'Tiempo de uso',
-      value: formatTimeFromMinutes(usageMinutes),
-      hint: 'Tiempo activo dentro de la plataforma.',
-    },
   ];
 
   const handleRefresh = () => onRefresh?.(grado);
@@ -267,51 +246,76 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
   return (
     <div className="dashboard dashboard--student">
       <DashboardHeader user={user} badge={gradeLabel} onLogout={onLogout} />
-      <section className="dashboard-hero">
-        <div>
-          <p className="dashboard-hero__eyebrow">Bienvenido(a) · {gradeLabel}</p>
-          <h1>Hola, {firstName}</h1>
-          <p>
-            Revisa tu progreso general, completa nuevas actividades y mantente al día con las
-            recomendaciones personalizadas.
-          </p>
-        </div>
-        <button type="button" className="btn-primary" onClick={handleRefresh} disabled={loading}>
-          {loading ? 'Actualizando...' : 'Actualizar tablero'}
-        </button>
-      </section>
+      <div className="dashboard-layout">
+        <main className="dashboard-main">
+          <StudentCourseGrid
+            sectionId="tablero-cursos"
+            courses={courses}
+            loading={loading}
+            error={error}
+            onRefresh={handleRefresh}
+          />
 
-      <StudentMetrics metrics={metrics} />
+          <StudentMetrics sectionId="metricas" metrics={metrics} />
 
-      <section className="student-section student-section--notifications">
-        <div>
-          <h2>Notificaciones por correo electrónico</h2>
-          <p>Recibe alertas cuando haya nuevas actividades o recomendaciones.</p>
-        </div>
-        <button
-          type="button"
-          className={`toggle ${notificationsEnabled ? 'toggle--on' : 'toggle--off'}`}
-          onClick={() => setNotificationsEnabled((value) => !value)}
-        >
-          <span className="toggle__indicator" />
-          {notificationsEnabled ? 'Activadas' : 'Desactivadas'}
-        </button>
-      </section>
+          <StudentRecommendations
+            sectionId="recomendaciones"
+            latest={latestRecommendation}
+            history={recommendationHistory}
+          />
 
-      <StudentRecommendations latest={latestRecommendation} history={recommendationHistory} />
+          <StudentLimits
+            sectionId="intentos"
+            attemptsLeft={attemptsLeft}
+            totalAttempts={totalAttempts}
+            history={progressHistory}
+          />
+        </main>
 
-      <StudentCourseGrid
-        courses={courses}
-        loading={loading}
-        error={error}
-        onRefresh={handleRefresh}
-      />
+        <aside className="dashboard-aside">
+          <section className="dashboard-hero-card">
+            <p className="dashboard-hero__eyebrow">Bienvenido(a) · {gradeLabel}</p>
+            <h1>Hola, {firstName}</h1>
+            <p>
+              Revisa tu progreso general, completa nuevas actividades y mantente al día con las
+              recomendaciones personalizadas.
+            </p>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              {loading ? 'Actualizando...' : 'Actualizar tablero'}
+            </button>
+          </section>
 
-      <StudentLimits
-        attemptsLeft={attemptsLeft}
-        totalAttempts={totalAttempts}
-        history={progressHistory}
-      />
+          <nav className="dashboard-menu" aria-label="Navegación del tablero">
+            <h2>Menú rápido</h2>
+            <ul>
+              <li><a href="#tablero-cursos">Cursos</a></li>
+              <li><a href="#metricas">Promedios</a></li>
+              <li><a href="#recomendaciones">Recomendaciones</a></li>
+              <li><a href="#intentos">Intentos</a></li>
+            </ul>
+          </nav>
+
+          <section className="student-section student-section--notifications" id="notificaciones">
+            <div>
+              <h2>Notificaciones por correo electrónico</h2>
+              <p>Recibe alertas cuando haya nuevas actividades o recomendaciones.</p>
+            </div>
+            <button
+              type="button"
+              className={`toggle ${notificationsEnabled ? 'toggle--on' : 'toggle--off'}`}
+              onClick={() => setNotificationsEnabled((value) => !value)}
+            >
+              <span className="toggle__indicator" />
+              {notificationsEnabled ? 'Activadas' : 'Desactivadas'}
+            </button>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -57,6 +57,8 @@ body.dashboard-mode .container{
 @media (max-width: 1024px){
   .grid{ grid-template-columns:1fr }
   .brandcol{ order:-1 }
+  .dashboard-layout{ grid-template-columns:1fr }
+  .dashboard-aside{ position:static }
 }
 .formcol{ width:100%; display:flex; justify-content:center }
 .formwrap{ width:100%; max-width:540px; margin:0 auto }
@@ -151,6 +153,88 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   box-shadow:0 28px 72px rgba(148,163,184,.25);
   backdrop-filter:blur(24px);
   color:var(--dash-text);
+}
+
+.dashboard-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(260px,320px);
+  gap:32px;
+  align-items:start;
+}
+
+.dashboard-main{
+  display:flex;
+  flex-direction:column;
+  gap:32px;
+}
+
+.dashboard-aside{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+  position:sticky;
+  top:32px;
+}
+
+.dashboard-hero-card{
+  background:linear-gradient(160deg, rgba(99,102,241,.16), rgba(236,72,153,.12));
+  border:1px solid rgba(99,102,241,.18);
+  border-radius:24px;
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.dashboard-hero-card--teacher{
+  background:linear-gradient(160deg, rgba(59,130,246,.15), rgba(16,185,129,.12));
+  border-color:rgba(59,130,246,.28);
+}
+
+.dashboard-hero-card h1{
+  margin:0;
+  font-size:clamp(24px, 3vw, 30px);
+}
+
+.dashboard-hero-card p{
+  margin:0;
+  color:var(--dash-muted);
+  line-height:1.45;
+}
+
+.dashboard-menu{
+  background:var(--dash-surface-strong);
+  border:1px solid var(--dash-border);
+  border-radius:20px;
+  padding:20px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.dashboard-menu h2{
+  margin:0;
+  font-size:16px;
+  font-weight:700;
+}
+
+.dashboard-menu ul{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.dashboard-menu a{
+  color:var(--dash-primary-dark);
+  text-decoration:none;
+  font-weight:600;
+}
+
+.dashboard-menu a:hover{
+  text-decoration:underline;
 }
 
 .dashboard-header{
@@ -271,6 +355,50 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   max-width:50ch;
   color:var(--dash-muted);
   font-weight:500;
+}
+
+.teacher-section--history{
+  background:var(--dash-surface-strong);
+  border:1px solid var(--dash-border);
+  border-radius:24px;
+  padding:24px;
+}
+
+.teacher-history__list{
+  list-style:none;
+  padding:0;
+  margin:20px 0 0;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.teacher-history__list li{
+  display:grid;
+  grid-template-columns:100px 1fr;
+  gap:20px;
+  align-items:flex-start;
+}
+
+.teacher-history__date{
+  font-weight:700;
+  color:var(--dash-primary-dark);
+}
+
+.teacher-history__content h3{
+  margin:0 0 4px;
+  font-size:16px;
+}
+
+.teacher-history__content p{
+  margin:0;
+  color:var(--dash-muted);
+  line-height:1.5;
+}
+
+.teacher-empty{
+  margin:0;
+  color:var(--dash-muted);
 }
 
 /* Métricas compartidas */

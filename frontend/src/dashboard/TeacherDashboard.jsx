@@ -1,5 +1,5 @@
 // frontend/src/dashboard/TeacherDashboard.jsx
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import DashboardHeader from './components/DashboardHeader.jsx';
 import { getFirstName } from '../utils/user.js';
 
@@ -49,6 +49,55 @@ const SAMPLE_STUDENTS = [
   },
 ];
 
+const SAMPLE_HISTORY = [
+  {
+    id: 'history-1',
+    title: 'Entrega destacada',
+    description: 'Ana López completó "Proyecto de fracciones" con calificación sobresaliente.',
+    date: '12 de marzo',
+  },
+  {
+    id: 'history-2',
+    title: 'Seguimiento requerido',
+    description: 'Carlos Pérez necesita repasar "Comprensión de lectura - Unidad 2".',
+    date: '09 de marzo',
+  },
+  {
+    id: 'history-3',
+    title: 'Nueva recomendación enviada',
+    description: 'Se asignó refuerzo de Álgebra para el grupo de Matemática.',
+    date: '06 de marzo',
+  },
+];
+
+function TeacherStudentHistory({ entries, sectionId }) {
+  return (
+    <section id={sectionId} className="teacher-section teacher-section--history">
+      <header className="section-header">
+        <div>
+          <h2>Historial de estudiantes</h2>
+          <p>Últimos eventos registrados por la clase.</p>
+        </div>
+      </header>
+      {entries.length ? (
+        <ul className="teacher-history__list">
+          {entries.map((item) => (
+            <li key={item.id}>
+              <div className="teacher-history__date">{item.date}</div>
+              <div className="teacher-history__content">
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="teacher-empty">Aún no hay eventos registrados.</p>
+      )}
+    </section>
+  );
+}
+
 export default function TeacherDashboard({ user, onLogout }) {
   const report = user?.reporteEstudiantil || user?.studentReport || {};
   const focusAreas = useMemo(() => {
@@ -63,6 +112,19 @@ export default function TeacherDashboard({ user, onLogout }) {
       return historial.map(normalizeStudentRow);
     }
     return SAMPLE_STUDENTS;
+  }, [user]);
+
+  const activityHistory = useMemo(() => {
+    const events = user?.historialAprendizaje || user?.studentActivityHistory || [];
+    if (Array.isArray(events) && events.length) {
+      return events.map((item, index) => ({
+        id: item.id || index,
+        title: item?.titulo || item?.title || 'Evento',
+        description: item?.descripcion || item?.description || 'Actualización registrada.',
+        date: item?.fecha || item?.date || '',
+      }));
+    }
+    return SAMPLE_HISTORY;
   }, [user]);
 
   const metrics = [
@@ -107,91 +169,143 @@ export default function TeacherDashboard({ user, onLogout }) {
 
   const firstName = getFirstName(user);
 
+  const handleDownloadReport = useCallback(() => {
+    if (!history.length) return;
+    const headers = [
+      'Estudiante',
+      'Promedio',
+      'Cobertura',
+      'Progreso',
+      'Completados',
+      'Abandono',
+      'Foco débil',
+      'Frecuencia',
+    ];
+    const rows = history.map((row) => [
+      row.name,
+      row.average,
+      row.coverage,
+      row.progress,
+      row.completions,
+      row.dropout,
+      row.focus,
+      row.frequency,
+    ]);
+    const csvContent = [headers, ...rows].map((line) => line.join(',')).join('\n');
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'informe-estudiantil.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [history]);
+
   return (
     <div className="dashboard dashboard--teacher">
       <DashboardHeader user={user} onLogout={onLogout} badge="Docente" />
 
-      <section className="dashboard-hero dashboard-hero--teacher">
-        <div>
-          <p className="dashboard-hero__eyebrow">Panel docente</p>
-          <h1>Hola, {firstName}</h1>
-          <p>
-            Supervisa el aprendizaje de tus estudiantes, identifica focos débiles y recibe informes
-            listos para compartir.
-          </p>
-        </div>
-        <button type="button" className="btn-primary">Descargar informe</button>
-      </section>
-
-      <section className="teacher-section teacher-section--metrics">
-        {metrics.map((metric) => (
-          <article className="metric-card" key={metric.label}>
-            <div className="metric-card__label">{metric.label}</div>
-            <div className="metric-card__value">{metric.value}</div>
-            <p className="metric-card__hint">{metric.hint}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="teacher-section teacher-section--report">
-        <header className="section-header">
-          <div>
-            <h2>Informe estudiantil</h2>
-            <p>Promedios, coberturas, avances y focos de atención por estudiante.</p>
-          </div>
-          <span className="section-note">Datos ilustrativos mientras se sincroniza la información.</span>
-        </header>
-        <div className="teacher-table">
-          <div className="teacher-table__head">
-            <span>Estudiante</span>
-            <span>Promedio</span>
-            <span>Cobertura</span>
-            <span>Progreso</span>
-            <span>Completados</span>
-            <span>Abandono</span>
-            <span>Foco débil</span>
-            <span>Frecuencia</span>
-          </div>
-          <div className="teacher-table__body">
-            {history.map((row) => (
-              <div className="teacher-table__row" key={row.id}>
-                <span>{row.name}</span>
-                <span>{row.average}</span>
-                <span>{row.coverage}</span>
-                <span>{row.progress}</span>
-                <span>{row.completions}</span>
-                <span>{row.dropout}</span>
-                <span>{row.focus}</span>
-                <span>{row.frequency}</span>
+      <div className="dashboard-layout">
+        <main className="dashboard-main">
+          <section id="informe-estudiantil" className="teacher-section teacher-section--report">
+            <header className="section-header">
+              <div>
+                <h2>Informe estudiantil</h2>
+                <p>Promedios, coberturas, avances y focos de atención por estudiante.</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <span className="section-note">Datos ilustrativos mientras se sincroniza la información.</span>
+            </header>
+            <div className="teacher-table">
+              <div className="teacher-table__head">
+                <span>Estudiante</span>
+                <span>Promedio</span>
+                <span>Cobertura</span>
+                <span>Progreso</span>
+                <span>Completados</span>
+                <span>Abandono</span>
+                <span>Foco débil</span>
+                <span>Frecuencia</span>
+              </div>
+              <div className="teacher-table__body">
+                {history.map((row) => (
+                  <div className="teacher-table__row" key={row.id}>
+                    <span>{row.name}</span>
+                    <span>{row.average}</span>
+                    <span>{row.coverage}</span>
+                    <span>{row.progress}</span>
+                    <span>{row.completions}</span>
+                    <span>{row.dropout}</span>
+                    <span>{row.focus}</span>
+                    <span>{row.frequency}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
 
-      <section className="teacher-section teacher-section--focus">
-        <div className="teacher-focus">
-          <h2>Focos débiles</h2>
-          <p>Temas que requieren refuerzo adicional.</p>
-          <ul>
-            {focusAreas.map((focus) => (
-              <li key={focus}>{focus}</li>
+          <section id="metricas-docente" className="teacher-section teacher-section--metrics">
+            {metrics.map((metric) => (
+              <article className="metric-card" key={metric.label}>
+                <div className="metric-card__label">{metric.label}</div>
+                <div className="metric-card__value">{metric.value}</div>
+                <p className="metric-card__hint">{metric.hint}</p>
+              </article>
             ))}
-          </ul>
-        </div>
-        <div className="teacher-frequency">
-          <h2>Frecuencia de uso</h2>
-          <p>Seguimiento del tiempo de conexión y sesiones por periodo.</p>
-          <ul>
-            {frequency.map((item) => (
-              <li key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+          </section>
+
+          <TeacherStudentHistory sectionId="historial-estudiantes" entries={activityHistory} />
+
+          <section id="focos" className="teacher-section teacher-section--focus">
+            <div className="teacher-focus">
+              <h2>Focos débiles</h2>
+              <p>Temas que requieren refuerzo adicional.</p>
+              <ul>
+                {focusAreas.map((focus) => (
+                  <li key={focus}>{focus}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="teacher-frequency">
+              <h2>Frecuencia de uso</h2>
+              <p>Seguimiento del tiempo de conexión y sesiones por periodo.</p>
+              <ul>
+                {frequency.map((item) => (
+                  <li key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </main>
+
+        <aside className="dashboard-aside">
+          <section className="dashboard-hero-card dashboard-hero-card--teacher">
+            <p className="dashboard-hero__eyebrow">Panel docente</p>
+            <h1>Hola, {firstName}</h1>
+            <p>
+              Supervisa el aprendizaje de tus estudiantes, identifica focos débiles y descarga
+              informes listos para compartir.
+            </p>
+            <button type="button" className="btn-primary" onClick={handleDownloadReport}>
+              Descargar informe
+            </button>
+          </section>
+
+          <nav className="dashboard-menu" aria-label="Navegación del tablero docente">
+            <h2>Menú rápido</h2>
+            <ul>
+              <li><a href="#informe-estudiantil">Informe estudiantil</a></li>
+              <li><a href="#metricas-docente">Indicadores</a></li>
+              <li><a href="#historial-estudiantes">Historial</a></li>
+              <li><a href="#focos">Focos y frecuencia</a></li>
+            </ul>
+          </nav>
+        </aside>
+      </div>
     </div>
   );
 }
