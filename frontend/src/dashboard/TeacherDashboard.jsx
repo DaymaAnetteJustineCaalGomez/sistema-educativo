@@ -23,12 +23,12 @@ function buildTeacherReportPdf({ teacherName, history }) {
   const systemStamp = `Sistema: ${systemName}`;
   const pageWidth = 842; // A4 landscape
   const pageHeight = 595;
-  const marginX = 58;
-  const marginBottom = 58;
-  const bannerHeight = 118;
+  const marginX = 64;
+  const marginBottom = 60;
+  const bannerHeight = 126;
   const bannerBottom = pageHeight - bannerHeight;
-  const rowHeight = 34;
-  const tableHeaderHeight = rowHeight + 14;
+  const rowHeight = 42;
+  const tableHeaderHeight = rowHeight + 24;
   const textBlocks = [];
 
   const tableLeft = marginX;
@@ -51,15 +51,16 @@ function buildTeacherReportPdf({ teacherName, history }) {
   columns.forEach((col, index) => {
     const isLast = index === columns.length - 1;
     const computedWidth = (tableWidth * col.weight) / totalWeight;
-    const width = isLast ? tableRight - runningX : Math.max(computedWidth, 60);
+    const width = isLast ? tableRight - runningX : Math.max(computedWidth, 72);
     col.width = width;
     col.startX = runningX;
-    col.textX = Math.round(runningX + 10);
+    col.textX = Math.round(runningX + 14);
     runningX += col.width;
   });
 
   const addText = (text, x, y, size = 12, color = '0 0 0', fontKey = 'F1') => {
     textBlocks.push(`${color} rg`);
+    textBlocks.push('0 Tr');
     textBlocks.push(`BT /${fontKey} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfText(text)}) Tj ET`);
     if (color !== '0 0 0') {
       textBlocks.push('0 0 0 rg');
@@ -81,33 +82,33 @@ function buildTeacherReportPdf({ teacherName, history }) {
   };
 
   // Background and banner
-  drawRect(0, 0, pageWidth, pageHeight, '0.97 0.98 1');
-  drawRect(0, bannerBottom, pageWidth, bannerHeight, '0.46 0.63 0.89');
+  drawRect(0, 0, pageWidth, pageHeight, '0.96 0.97 0.99');
+  drawRect(0, bannerBottom, pageWidth, bannerHeight, '0.41 0.59 0.87');
 
-  const bannerTitleY = bannerBottom + bannerHeight - 46;
-  addText(systemName, marginX, bannerTitleY + 36, 18, '1 1 1', 'F2');
-  addText(title, marginX, bannerTitleY + 12, 26, '1 1 1', 'F2');
-  addText(subtitle, marginX, bannerTitleY - 12, 16, '1 1 1');
+  const bannerTitleY = bannerBottom + bannerHeight - 52;
+  addText(systemName, marginX, bannerTitleY + 40, 20, '1 1 1', 'F2');
+  addText(title, marginX, bannerTitleY + 12, 30, '1 1 1', 'F2');
+  addText(subtitle, marginX, bannerTitleY - 18, 17, '1 1 1');
 
-  const metaStartY = bannerBottom - 34;
-  addText(generatedFor, marginX, metaStartY, 13, '0 0 0', 'F2');
-  addText(generatedOn, marginX, metaStartY - 20, 12);
-  addText(systemStamp, marginX, metaStartY - 40, 12);
+  const metaStartY = bannerBottom - 38;
+  addText(generatedFor, marginX, metaStartY, 15, '0.09 0.14 0.27', 'F2');
+  addText(generatedOn, marginX, metaStartY - 24, 14);
+  addText(systemStamp, marginX, metaStartY - 48, 14);
 
-  const tableTop = metaStartY - 68;
+  const tableTop = metaStartY - 64;
   const tableHeaderBottom = tableTop - tableHeaderHeight;
   const tableBottom = marginBottom;
 
-  drawRect(tableLeft - 18, tableBottom - 16, tableWidth + 36, tableTop - tableBottom + 46, '1 1 1');
-  drawRect(tableLeft, tableHeaderBottom, tableWidth, tableHeaderHeight, '0.89 0.92 0.97');
-  drawLine(tableLeft, tableTop, tableRight, tableTop, '0.65 0.7 0.8');
-  drawLine(tableLeft, tableHeaderBottom, tableRight, tableHeaderBottom, '0.75 0.8 0.9');
+  drawRect(tableLeft - 24, tableBottom - 20, tableWidth + 48, tableTop - tableBottom + 60, '1 1 1');
+  drawRect(tableLeft, tableHeaderBottom, tableWidth, tableHeaderHeight, '0.88 0.92 0.97');
+  drawLine(tableLeft, tableTop, tableRight, tableTop, '0.55 0.65 0.82', 1.2);
+  drawLine(tableLeft, tableHeaderBottom, tableRight, tableHeaderBottom, '0.72 0.79 0.91', 1);
 
   columns.forEach((col, index) => {
     if (index > 0) {
-      drawLine(col.startX, tableBottom, col.startX, tableTop, '0.85 0.88 0.94', 0.8);
+      drawLine(col.startX, tableBottom, col.startX, tableTop, '0.85 0.88 0.94', 0.9);
     }
-    addText(col.label, col.textX, tableTop - 22, 13, '0.14 0.24 0.42', 'F2');
+    addText(col.label, col.textX, tableTop - 26, 16, '0.12 0.22 0.39', 'F2');
   });
   drawLine(tableRight, tableBottom, tableRight, tableTop, '0.65 0.7 0.8');
 
@@ -119,21 +120,23 @@ function buildTeacherReportPdf({ teacherName, history }) {
     }
 
     if (rowIndex % 2 === 0) {
-      drawRect(tableLeft, nextRowBottom, tableWidth, rowHeight, '0.96 0.97 1');
+      drawRect(tableLeft, nextRowBottom, tableWidth, rowHeight, '0.95 0.97 1');
     }
 
-    const baseline = nextRowBottom + rowHeight - 11;
+    const baseline = nextRowBottom + rowHeight - 14;
     columns.forEach((col) => {
       const value = row[col.accessor] ?? '—';
-      addText(value, col.textX, baseline, 12);
+      const fontKey = col.accessor === 'name' ? 'F2' : 'F1';
+      const color = col.accessor === 'name' ? '0.08 0.12 0.24' : '0 0 0';
+      addText(value, col.textX, baseline, 14, color, fontKey);
     });
 
     rowTop = nextRowBottom;
   });
 
-  drawLine(tableLeft, tableBottom, tableRight, tableBottom, '0.75 0.8 0.9');
+  drawLine(tableLeft, tableBottom, tableRight, tableBottom, '0.72 0.79 0.91', 1);
 
-  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 11, '0.28 0.28 0.32');
+  addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 12, '0.25 0.25 0.32', 'F2');
 
   const content = textBlocks.join('\n');
   const encoder = new TextEncoder();
