@@ -95,5 +95,10 @@ export const api = {
   me:       () => fetchJSON(API.me),
   cursosBasico: (grado = 1, options) =>
     fetchJSON(`${BASE}${CNB_PREFIX}/basico/${grado}/cursos`, withSignalOption(options)),
+  cursoContenido: (grado = 1, areaId, options) =>
+    fetchJSON(
+      `${BASE}${CNB_PREFIX}/basico/${grado}/cursos/${areaId}/contenidos`,
+      withSignalOption(options),
+    ),
   // logout:   () => fetchJSON(API.logout, { method:'POST' }),
 }

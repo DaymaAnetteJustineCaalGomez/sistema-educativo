@@ -1,7 +1,8 @@
 // frontend/src/dashboard/StudentDashboard.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import DashboardHeader from './components/DashboardHeader.jsx';
 import { getFirstName, getGradeLabel, parseGrado } from '../utils/user.js';
+import { api } from '../api.js';
 
 function formatPercentage(value) {
   if (value === null || value === undefined || Number.isNaN(value)) return '—';
@@ -24,6 +25,49 @@ function resolveCourseAverage(course) {
     }
   }
   return 0;
+}
+
+function createSampleResources(areaName) {
+  const subject = areaName || 'Área';
+  const sampleUrl = 'https://aprende.mineduc.gob.gt';
+  return {
+    videos: [
+      {
+        title: `${subject}: introducción guiada`,
+        url: sampleUrl,
+        duration: '06:00',
+      },
+      {
+        title: `${subject}: actividades prácticas`,
+        url: sampleUrl,
+        duration: '08:30',
+      },
+    ],
+    lecturas: [
+      {
+        title: `Guía de estudio de ${subject}`,
+        url: sampleUrl,
+        description: 'Resumen de contenidos clave alineados al CNB.',
+      },
+      {
+        title: `Planificación semanal de ${subject}`,
+        url: sampleUrl,
+        description: 'Secuencia sugerida de sesiones y actividades evaluables.',
+      },
+    ],
+    ejercicios: [
+      {
+        title: `Cuestionario diagnóstico de ${subject}`,
+        url: sampleUrl,
+        type: 'Evaluación',
+      },
+      {
+        title: `Taller interactivo de ${subject}`,
+        url: sampleUrl,
+        type: 'Práctica guiada',
+      },
+    ],
+  };
 }
 
 function StudentMetrics({ metrics, sectionId }) {
@@ -75,7 +119,149 @@ function StudentRecommendations({ latest, history, sectionId }) {
   );
 }
 
-function StudentCourseGrid({ courses, loading, error, onRefresh, sectionId }) {
+function CourseContentDialog({
+  open,
+  course,
+  content,
+  loading,
+  error,
+  onClose,
+  onRetry,
+}) {
+  if (!open) return null;
+
+  const title = course?.titulo || course?.area || 'Área sin nombre';
+
+  return (
+    <div className="dashboard-modal" role="dialog" aria-modal="true" aria-labelledby="curso-detalle-titulo">
+      <div className="dashboard-modal__backdrop" onClick={onClose} />
+      <div className="dashboard-modal__content">
+        <header className="dashboard-modal__header">
+          <div>
+            <p className="dashboard-modal__eyebrow">Contenidos del CNB</p>
+            <h2 id="curso-detalle-titulo">{title}</h2>
+          </div>
+          <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar">
+            ×
+          </button>
+        </header>
+
+        {loading ? <p className="dashboard-modal__status">Cargando contenidos...</p> : null}
+        {error ? (
+          <div className="dashboard-modal__status dashboard-modal__status--error">
+            <p>{error}</p>
+            <button type="button" className="btn-secondary" onClick={onRetry}>
+              Reintentar
+            </button>
+          </div>
+        ) : null}
+
+        {!loading && !error && content ? (
+          <div className="course-detail">
+            <section>
+              <h3>Descripción</h3>
+              <p>{content.descripcion}</p>
+            </section>
+
+            <section>
+              <h3>Competencias</h3>
+              {content.competencias?.length ? (
+                <ul>
+                  {content.competencias.map((item) => (
+                    <li key={item.id || item.codigo}>
+                      <strong>{item.codigo}</strong>
+                      <span>{item.enunciado}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="student-empty">Aún no hay competencias registradas para este grado.</p>
+              )}
+            </section>
+
+            <section className="course-detail__resources">
+              <div>
+                <h3>Videos</h3>
+                {content.recursos?.videos?.length ? (
+                  <ul>
+                    {content.recursos.videos.map((video) => (
+                      <li key={video.title}>
+                        <div>
+                          <span className="resource-title">{video.title}</span>
+                          {video.duration ? (
+                            <span className="resource-meta">{video.duration}</span>
+                          ) : null}
+                        </div>
+                        <a href={video.url} target="_blank" rel="noreferrer" className="link-inline">
+                          Ver video
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="student-empty">Pronto encontrarás videos sugeridos aquí.</p>
+                )}
+              </div>
+              <div>
+                <h3>Lecturas y guías</h3>
+                {content.recursos?.lecturas?.length ? (
+                  <ul>
+                    {content.recursos.lecturas.map((item) => (
+                      <li key={item.title}>
+                        <div>
+                          <span className="resource-title">{item.title}</span>
+                          {item.description ? (
+                            <span className="resource-meta">{item.description}</span>
+                          ) : null}
+                        </div>
+                        <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
+                          Abrir recurso
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="student-empty">Agrega lecturas y guías desde tu biblioteca.</p>
+                )}
+              </div>
+              <div>
+                <h3>Ejercicios</h3>
+                {content.recursos?.ejercicios?.length ? (
+                  <ul>
+                    {content.recursos.ejercicios.map((item) => (
+                      <li key={item.title}>
+                        <div>
+                          <span className="resource-title">{item.title}</span>
+                          {item.type ? <span className="resource-meta">{item.type}</span> : null}
+                        </div>
+                        <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
+                          Resolver
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="student-empty">Integra evaluaciones y prácticas desde tu plan de clase.</p>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function StudentCourseGrid({
+  courses,
+  loading,
+  error,
+  onRefresh,
+  onViewContent,
+  sectionId,
+  activeCourseId,
+  contentLoading,
+}) {
   let content = null;
 
   if (loading) {
@@ -102,7 +288,12 @@ function StudentCourseGrid({ courses, loading, error, onRefresh, sectionId }) {
                 <span>Progreso</span>
                 <strong>{formatPercentage(progress)}</strong>
               </div>
-              <button type="button" className="course-card__button">
+              <button
+                type="button"
+                className="course-card__button"
+                onClick={() => onViewContent?.(course)}
+                disabled={contentLoading && activeCourseId === course?._id}
+              >
                 Ver contenidos
               </button>
             </article>
@@ -128,7 +319,7 @@ function StudentCourseGrid({ courses, loading, error, onRefresh, sectionId }) {
   );
 }
 
-function StudentLimits({ attemptsLeft, totalAttempts, history, sectionId }) {
+function StudentAttempts({ attemptsLeft, totalAttempts, sectionId }) {
   return (
     <section id={sectionId} className="student-section student-section--limits">
       <div className="student-limits__attempts">
@@ -140,20 +331,12 @@ function StudentLimits({ attemptsLeft, totalAttempts, history, sectionId }) {
           Cada evaluación cuenta con un máximo de {totalAttempts} intentos.
         </span>
       </div>
-      <div className="student-limits__history">
-        <h3>Historial de progreso</h3>
-        {history.length ? (
-          <ul>
-            {history.map((item) => (
-              <li key={item.id || item.title}>
-                <span>{item.title}</span>
-                <span>{item.date}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="student-empty">Aún no has completado actividades registradas.</p>
-        )}
+      <div className="student-limits__reminder">
+        <h3>Recordatorio rápido</h3>
+        <p>
+          Usa tus intentos con estrategia y revisa las recomendaciones antes de intentar una evaluación
+          nuevamente.
+        </p>
       </div>
     </section>
   );
@@ -210,16 +393,6 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
     }));
   }, [user]);
 
-  const progressHistory = useMemo(() => {
-    const history = user?.historialProgreso ?? user?.progressHistory ?? [];
-    if (!Array.isArray(history)) return [];
-    return history.map((item, index) => ({
-      id: item.id || index,
-      title: item?.titulo || item?.title || 'Actividad',
-      date: item?.fecha || item?.date || '',
-    }));
-  }, [user]);
-
   const totalAttempts = Number(user?.intentosTotales) || 3;
   const attemptsLeft = Number(user?.intentosRestantes) || totalAttempts;
 
@@ -243,6 +416,79 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
 
   const handleRefresh = () => onRefresh?.(grado);
 
+  const [activeCourse, setActiveCourse] = useState(null);
+  const [courseContent, setCourseContent] = useState(null);
+  const [courseContentLoading, setCourseContentLoading] = useState(false);
+  const [courseContentError, setCourseContentError] = useState('');
+
+  const handleLoadContent = useCallback(
+    async (course) => {
+      if (!course) return;
+      setActiveCourse(course);
+      setCourseContent(null);
+      setCourseContentError('');
+      setCourseContentLoading(true);
+
+      const areaId = course?._id || course?.slug;
+      if (!areaId) {
+        setCourseContentError('No se pudo identificar el curso seleccionado.');
+        setCourseContentLoading(false);
+        return;
+      }
+
+      try {
+        const payload = await api.cursoContenido(grado, areaId);
+        const sample = createSampleResources(course?.titulo || course?.area);
+        const safeCompetencias = Array.isArray(payload?.competencias)
+          ? payload.competencias
+          : [];
+        const safeRecursos = payload?.recursos || {};
+        const recursos = {
+          videos:
+            Array.isArray(safeRecursos.videos) && safeRecursos.videos.length
+              ? safeRecursos.videos
+              : sample.videos,
+          lecturas:
+            Array.isArray(safeRecursos.lecturas) && safeRecursos.lecturas.length
+              ? safeRecursos.lecturas
+              : sample.lecturas,
+          ejercicios:
+            Array.isArray(safeRecursos.ejercicios) && safeRecursos.ejercicios.length
+              ? safeRecursos.ejercicios
+              : sample.ejercicios,
+        };
+
+        setCourseContent({
+          titulo: payload?.titulo || course?.titulo || course?.area,
+          descripcion:
+            payload?.descripcion ||
+            course?.descripcion ||
+            `Recursos disponibles para ${course?.titulo || course?.area}.`,
+          competencias: safeCompetencias,
+          recursos,
+        });
+      } catch (err) {
+        setCourseContentError(err.message || 'No se pudieron cargar los contenidos.');
+      } finally {
+        setCourseContentLoading(false);
+      }
+    },
+    [grado],
+  );
+
+  const handleCloseContent = useCallback(() => {
+    setActiveCourse(null);
+    setCourseContent(null);
+    setCourseContentError('');
+    setCourseContentLoading(false);
+  }, []);
+
+  const handleRetryContent = useCallback(() => {
+    if (activeCourse) {
+      handleLoadContent(activeCourse);
+    }
+  }, [activeCourse, handleLoadContent]);
+
   return (
     <div className="dashboard dashboard--student">
       <DashboardHeader user={user} badge={gradeLabel} onLogout={onLogout} />
@@ -254,6 +500,9 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
             loading={loading}
             error={error}
             onRefresh={handleRefresh}
+            onViewContent={handleLoadContent}
+            activeCourseId={activeCourse ? activeCourse._id || activeCourse.slug : null}
+            contentLoading={courseContentLoading}
           />
 
           <StudentMetrics sectionId="metricas" metrics={metrics} />
@@ -264,11 +513,10 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
             history={recommendationHistory}
           />
 
-          <StudentLimits
+          <StudentAttempts
             sectionId="intentos"
             attemptsLeft={attemptsLeft}
             totalAttempts={totalAttempts}
-            history={progressHistory}
           />
         </main>
 
@@ -280,14 +528,6 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
               Revisa tu progreso general, completa nuevas actividades y mantente al día con las
               recomendaciones personalizadas.
             </p>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              {loading ? 'Actualizando...' : 'Actualizar tablero'}
-            </button>
           </section>
 
           <nav className="dashboard-menu" aria-label="Navegación del tablero">
@@ -316,6 +556,15 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
           </section>
         </aside>
       </div>
+      <CourseContentDialog
+        open={Boolean(activeCourse)}
+        course={activeCourse}
+        content={courseContent}
+        loading={courseContentLoading}
+        error={courseContentError}
+        onClose={handleCloseContent}
+        onRetry={handleRetryContent}
+      />
     </div>
   );
 }

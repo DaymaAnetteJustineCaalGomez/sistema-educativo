@@ -33,7 +33,11 @@ body{
 
 body.dashboard-mode{
   color:var(--dash-text);
-  background:linear-gradient(160deg, #f5f7ff 0%, #fdf2ff 46%, #fef7ec 100%);
+  background:
+    radial-gradient(46vw 38vh at 80% 12%, rgba(99,102,241,.22), transparent 70%),
+    radial-gradient(44vw 36vh at 18% 18%, rgba(236,72,153,.18), transparent 72%),
+    radial-gradient(42vw 40vh at 88% 82%, rgba(251,146,60,.16), transparent 74%),
+    linear-gradient(180deg, #1d2340 0%, #262c4f 48%, #1f2544 100%);
   display:block;
   padding:clamp(32px, 5vw, 64px);
 }
@@ -177,8 +181,8 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 }
 
 .dashboard-hero-card{
-  background:linear-gradient(160deg, rgba(99,102,241,.16), rgba(236,72,153,.12));
-  border:1px solid rgba(99,102,241,.18);
+  background:linear-gradient(160deg, rgba(148,163,255,.2), rgba(236,72,153,.16));
+  border:1px solid rgba(99,102,241,.24);
   border-radius:24px;
   padding:24px;
   display:flex;
@@ -187,8 +191,8 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 }
 
 .dashboard-hero-card--teacher{
-  background:linear-gradient(160deg, rgba(59,130,246,.15), rgba(16,185,129,.12));
-  border-color:rgba(59,130,246,.28);
+  background:linear-gradient(160deg, rgba(59,130,246,.18), rgba(16,185,129,.16));
+  border-color:rgba(59,130,246,.32);
 }
 
 .dashboard-hero-card h1{
@@ -471,6 +475,7 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .course-card__progress strong{ font-size:18px; color:var(--dash-primary-dark) }
 .course-card__button{ align-self:flex-start; padding:9px 16px; border-radius:999px; border:0; background:rgba(99,102,241,.12); color:var(--dash-primary-dark); font-weight:700; cursor:pointer }
 .course-card__button:hover{ background:rgba(99,102,241,.18) }
+.course-card__button[disabled]{ opacity:.6; cursor:not-allowed }
 
 .toggle{ position:relative; width:160px; padding:9px 14px 9px 42px; border-radius:999px; border:1px solid rgba(99,102,241,.24); font-weight:700; cursor:pointer; background:#fff; color:var(--dash-muted); text-align:left }
 .toggle__indicator{ position:absolute; left:10px; top:50%; transform:translateY(-50%); width:22px; height:22px; border-radius:50%; background:rgba(148,163,184,.4); transition:background .2s ease }
@@ -478,13 +483,35 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .toggle--on .toggle__indicator{ background:#22c55e }
 .toggle--off{ background:#fff; color:var(--dash-muted) }
 
+.dashboard-modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:120; padding:24px }
+.dashboard-modal__backdrop{ position:absolute; inset:0; background:rgba(15,23,42,.62); backdrop-filter:blur(6px) }
+.dashboard-modal__content{ position:relative; background:rgba(248,250,252,.98); border-radius:28px; border:1px solid rgba(99,102,241,.22); padding:clamp(24px,4vw,36px); max-width:860px; width:100%; max-height:90vh; overflow:auto; box-shadow:0 28px 80px rgba(15,23,42,.35) }
+.dashboard-modal__header{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px }
+.dashboard-modal__eyebrow{ margin:0 0 6px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--dash-muted) }
+.dashboard-modal__header h2{ margin:0; font-size:24px }
+.dashboard-modal__status{ background:rgba(99,102,241,.08); border:1px solid rgba(99,102,241,.2); padding:16px; border-radius:18px; color:var(--dash-text); display:flex; flex-direction:column; gap:12px; margin-bottom:20px }
+.dashboard-modal__status--error{ background:rgba(248,113,113,.12); border-color:rgba(248,113,113,.4); color:#b91c1c }
+.btn-close{ border:0; background:rgba(15,23,42,.06); color:var(--dash-muted); font-size:24px; font-weight:700; line-height:1; width:36px; height:36px; border-radius:12px; cursor:pointer }
+.btn-close:hover{ background:rgba(15,23,42,.1) }
+.course-detail{ display:flex; flex-direction:column; gap:24px }
+.course-detail section{ background:var(--dash-surface-strong); border:1px solid var(--dash-border); border-radius:22px; padding:22px; display:flex; flex-direction:column; gap:14px }
+.course-detail section h3{ margin:0; font-size:18px; font-weight:800 }
+.course-detail ul{ list-style:none; margin:0; padding:0; display:grid; gap:12px }
+.course-detail li{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid rgba(148,163,184,.18) }
+.course-detail li:last-child{ border-bottom:0 }
+.course-detail__resources{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:18px }
+.course-detail__resources ul{ gap:10px }
+.resource-title{ font-weight:700; color:var(--dash-text); display:block }
+.resource-meta{ font-size:12px; color:var(--dash-muted) }
+.link-inline{ color:var(--dash-primary-dark); font-weight:700; text-decoration:none }
+.link-inline:hover{ text-decoration:underline }
+
 .student-section--limits{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:20px }
-.student-limits__attempts, .student-limits__history{ background:var(--dash-surface-strong); border:1px solid var(--dash-border); border-radius:20px; padding:22px; display:flex; flex-direction:column; gap:12px }
-.student-limits__attempts h3, .student-limits__history h3{ margin:0; font-size:18px; font-weight:800 }
+.student-limits__attempts, .student-limits__reminder{ background:var(--dash-surface-strong); border:1px solid var(--dash-border); border-radius:20px; padding:22px; display:flex; flex-direction:column; gap:12px }
+.student-limits__attempts h3, .student-limits__reminder h3{ margin:0; font-size:18px; font-weight:800 }
 .student-limits__attempts p{ margin:0; font-weight:700; color:var(--dash-primary-dark) }
 .student-limits__hint{ font-size:13px; color:var(--dash-muted) }
-.student-limits__history ul{ list-style:none; margin:0; padding:0; display:grid; gap:10px }
-.student-limits__history li{ display:flex; justify-content:space-between; font-size:13px; color:var(--dash-muted) }
+.student-limits__reminder p{ margin:0; color:var(--dash-muted); line-height:1.5 }
 .student-empty{ margin:0; color:var(--dash-muted); font-size:13px }
 
 /* Teacher dashboard */

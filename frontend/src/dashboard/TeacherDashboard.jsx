@@ -3,6 +3,99 @@ import React, { useCallback, useMemo } from 'react';
 import DashboardHeader from './components/DashboardHeader.jsx';
 import { getFirstName } from '../utils/user.js';
 
+function escapePdfText(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)');
+}
+
+function buildTeacherReportPdf({ teacherName, history }) {
+  const title = 'Informe estudiantil';
+  const subtitle = 'Currículo Nacional Base · Guatemala';
+  const generatedFor = `Generado para: ${teacherName}`;
+  const pageWidth = 842; // A4 landscape
+  const pageHeight = 595;
+  const marginX = 60;
+  const headerTop = pageHeight - 70;
+  const subtitleTop = headerTop - 24;
+  const generatedTop = subtitleTop - 18;
+  const lineHeight = 18;
+  let currentY = generatedTop - 34;
+
+  const columns = [
+    { label: 'Estudiante', accessor: 'name', width: 180 },
+    { label: 'Promedio', accessor: 'average', width: 80 },
+    { label: 'Cobertura', accessor: 'coverage', width: 80 },
+    { label: 'Progreso', accessor: 'progress', width: 80 },
+    { label: 'Completados', accessor: 'completions', width: 90 },
+    { label: 'Abandono', accessor: 'dropout', width: 80 },
+    { label: 'Foco débil', accessor: 'focus', width: 110 },
+    { label: 'Frecuencia', accessor: 'frequency', width: 90 },
+  ];
+
+  let currentX = marginX;
+  columns.forEach((col) => {
+    col.x = currentX;
+    currentX += col.width;
+  });
+
+  const textBlocks = [
+    `BT /F1 20 Tf ${marginX} ${headerTop} Td (${escapePdfText(title)}) Tj ET`,
+    `BT /F1 12 Tf ${marginX} ${subtitleTop} Td (${escapePdfText(subtitle)}) Tj ET`,
+    `BT /F1 12 Tf ${marginX} ${generatedTop} Td (${escapePdfText(generatedFor)}) Tj ET`,
+  ];
+
+  const writeRow = (row, { bold = false } = {}) => {
+    if (currentY < marginX) return;
+    const fontSize = bold ? 12 : 11;
+    columns.forEach((col) => {
+      const value = bold ? col.label : row[col.accessor];
+      textBlocks.push(
+        `BT /F1 ${fontSize} Tf ${col.x} ${currentY} Td (${escapePdfText(value ?? '—')}) Tj ET`,
+      );
+    });
+    currentY -= lineHeight;
+  };
+
+  writeRow({}, { bold: true });
+  history.forEach((row) => {
+    writeRow(row);
+  });
+
+  const content = textBlocks.join('\n');
+  const encoder = new TextEncoder();
+  const contentBytes = encoder.encode(content);
+
+  const objects = [];
+  objects.push('1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj');
+  objects.push('2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj');
+  objects.push(
+    `3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj`,
+  );
+  objects.push(
+    `4 0 obj << /Length ${contentBytes.length} >> stream\n${content}\nendstream\nendobj`,
+  );
+  objects.push('5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj');
+
+  let pdf = '%PDF-1.4\n';
+  const offsets = ['0000000000 65535 f \n'];
+  objects.forEach((obj, index) => {
+    const offset = pdf.length;
+    offsets.push(String(offset).padStart(10, '0') + ' 00000 n \n');
+    pdf += `${obj}\n`;
+  });
+  const xrefPosition = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  offsets.forEach((entry) => {
+    pdf += entry;
+  });
+  pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  pdf += `startxref\n${xrefPosition}\n%%EOF`;
+
+  return new Blob([encoder.encode(pdf)], { type: 'application/pdf' });
+}
+
 function formatPercent(value) {
   if (value === null || value === undefined) return '—';
   const number = Number(value);
@@ -171,37 +264,22 @@ export default function TeacherDashboard({ user, onLogout }) {
 
   const handleDownloadReport = useCallback(() => {
     if (!history.length) return;
-    const headers = [
-      'Estudiante',
-      'Promedio',
-      'Cobertura',
-      'Progreso',
-      'Completados',
-      'Abandono',
-      'Foco débil',
-      'Frecuencia',
-    ];
-    const rows = history.map((row) => [
-      row.name,
-      row.average,
-      row.coverage,
-      row.progress,
-      row.completions,
-      row.dropout,
-      row.focus,
-      row.frequency,
-    ]);
-    const csvContent = [headers, ...rows].map((line) => line.join(',')).join('\n');
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'informe-estudiantil.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [history]);
+    try {
+      const teacherName = user?.nombre || user?.name || firstName;
+      const pdfBlob = buildTeacherReportPdf({ teacherName, history });
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'informe-estudiantil.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('No se pudo generar el informe en PDF', err);
+      window.alert('No se pudo generar el PDF. Intenta nuevamente.');
+    }
+  }, [history, firstName, user]);
 
   return (
     <div className="dashboard dashboard--teacher">

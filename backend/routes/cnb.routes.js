@@ -16,6 +16,49 @@ const router = Router();
 
 // Mapas y utilidades
 const gradoNumToCode = (n) => ({ 1: "1B", 2: "2B", 3: "3B" }[Number(n)] || null);
+
+const buildSampleResources = (areaName, sourceUrl) => {
+  const subject = areaName || "Área";
+  const baseUrl = sourceUrl || "https://aprende.mineduc.gob.gt";
+  return {
+    videos: [
+      {
+        title: `${subject}: introducción guiada`,
+        url: baseUrl,
+        duration: "06:00",
+      },
+      {
+        title: `${subject}: actividades prácticas`,
+        url: baseUrl,
+        duration: "08:30",
+      },
+    ],
+    lecturas: [
+      {
+        title: `Guía de estudio de ${subject}`,
+        url: baseUrl,
+        description: "Resumen de los contenidos clave del CNB para reforzar desde casa.",
+      },
+      {
+        title: `Planificación semanal de ${subject}`,
+        url: baseUrl,
+        description: "Secuencia sugerida de sesiones y actividades evaluables.",
+      },
+    ],
+    ejercicios: [
+      {
+        title: `Cuestionario diagnóstico de ${subject}`,
+        url: baseUrl,
+        type: "Evaluación",
+      },
+      {
+        title: `Taller interactivo de ${subject}`,
+        url: baseUrl,
+        type: "Práctica guiada",
+      },
+    ],
+  };
+};
 const fallbackAreasBasico = [
   "Comunicación y Lenguaje Idioma Español",
   "Comunicación y Lenguaje Idioma Extranjero",
@@ -65,8 +108,10 @@ router.get("/basico/:grado/cursos", authRequired, async (req, res) => {
     if (!areas?.length) {
       const data = fallbackAreasBasico.map((name, i) => ({
         _id: `fallback-${code}-${i}`,
+        slug: null,
         titulo: name,
         area: name,
+        descripcion: `Colección de contenidos de ${name}.`,
         competenciasCount: 0,
         recursosCount: 0,
         progreso: 0,
@@ -94,8 +139,10 @@ router.get("/basico/:grado/cursos", authRequired, async (req, res) => {
 
         return {
           _id: String(a._id),
+          slug: a?.slug || null,
           titulo,
           area: titulo,
+          descripcion: a?.descripcion || null,
           competenciasCount,
           recursosCount,
           progreso,
@@ -109,6 +156,61 @@ router.get("/basico/:grado/cursos", authRequired, async (req, res) => {
   } catch (err) {
     console.error("[CNB] GET /basico/:grado/cursos", err);
     res.status(500).json({ error: "Error al obtener cursos del CNB" });
+  }
+});
+
+router.get("/basico/:grado/cursos/:areaId/contenidos", authRequired, async (req, res) => {
+  try {
+    const code = gradoNumToCode(req.params.grado);
+    if (!code) return res.status(400).json({ error: "Grado inválido (use 1, 2 o 3)" });
+
+    const { areaId } = req.params;
+    let area = null;
+    if (areaId?.startsWith("fallback")) {
+      const index = Number(areaId.split("-").pop());
+      const name = fallbackAreasBasico[index] || "Área sin nombre";
+      area = {
+        _id: areaId,
+        nombre: name,
+        descripcion: `Contenidos de ${name} alineados al Currículo Nacional Base de Guatemala.`,
+        fuente: { url: "https://aprende.mineduc.gob.gt" },
+        slug: null,
+      };
+    } else {
+      area =
+        (await CNBArea.findById(areaId).lean()) ||
+        (await CNBArea.findOne({ slug: areaId }).lean());
+    }
+
+    if (!area) return res.status(404).json({ error: "Área no encontrada" });
+
+    const competencias = await CNBCompetencia.find({
+      areaId: area?._id,
+      grado: code,
+    })
+      .sort({ orden: 1 })
+      .lean()
+      .catch(() => []);
+
+    const response = {
+      id: String(area._id || areaId),
+      slug: area.slug || null,
+      titulo: area.nombre || area.slug || "Área sin nombre",
+      descripcion:
+        area.descripcion ||
+        `Colección de competencias, recursos y ejercicios de ${area.nombre || "esta área"} para ${code}.`,
+      competencias: competencias.map((comp) => ({
+        id: String(comp._id),
+        codigo: comp.codigo,
+        enunciado: comp.enunciado,
+      })),
+      recursos: buildSampleResources(area.nombre, area.fuente?.url),
+    };
+
+    res.json(response);
+  } catch (err) {
+    console.error("[CNB] GET /basico/:grado/cursos/:areaId/contenidos", err);
+    res.status(500).json({ error: "Error al obtener contenidos del curso" });
   }
 });
 
