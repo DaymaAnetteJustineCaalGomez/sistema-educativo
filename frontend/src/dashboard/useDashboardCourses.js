@@ -4,7 +4,8 @@ import { api } from '../api.js';
 import { parseGrado } from '../utils/user.js';
 
 export default function useDashboardCourses(initialGrade) {
-  const [grade, setGrade] = useState(parseGrado(initialGrade) || 1);
+  const normalizedInitial = parseGrado(initialGrade) || null;
+  const [grade, setGrade] = useState(normalizedInitial || 1);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -12,7 +13,14 @@ export default function useDashboardCourses(initialGrade) {
 
   const fetchCourses = useCallback(
     async (targetGrade = grade) => {
-      const normalized = parseGrado(targetGrade) || 1;
+      const normalized = parseGrado(targetGrade);
+      if (!normalized) {
+        setCourses([]);
+        setError('');
+        setLoading(false);
+        return;
+      }
+
       setGrade(normalized);
       setLoading(true);
       setError('');
@@ -37,11 +45,18 @@ export default function useDashboardCourses(initialGrade) {
         }
       }
     },
-    [grade]
+    [grade],
   );
 
   useEffect(() => {
-    fetchCourses(initialGrade);
+    const normalized = parseGrado(initialGrade);
+    if (!normalized) {
+      setCourses([]);
+      setError('');
+      setLoading(false);
+      return;
+    }
+    fetchCourses(normalized);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialGrade]);
 
