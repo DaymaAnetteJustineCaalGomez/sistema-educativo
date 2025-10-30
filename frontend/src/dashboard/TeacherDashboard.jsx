@@ -23,29 +23,39 @@ function buildTeacherReportPdf({ teacherName, history }) {
   const systemStamp = `Sistema: ${systemName}`;
   const pageWidth = 842; // A4 landscape
   const pageHeight = 595;
-  const marginX = 60;
-  const marginBottom = 60;
-  const bannerHeight = 120;
+  const marginX = 58;
+  const marginBottom = 58;
+  const bannerHeight = 118;
   const bannerBottom = pageHeight - bannerHeight;
-  const rowHeight = 26;
-  const tableHeaderHeight = rowHeight + 6;
+  const rowHeight = 28;
+  const tableHeaderHeight = rowHeight + 12;
   const textBlocks = [];
 
+  const tableLeft = marginX;
+  const tableRight = pageWidth - marginX;
+  const tableWidth = tableRight - tableLeft;
+
   const columns = [
-    { label: 'Estudiante', accessor: 'name', width: 190 },
-    { label: 'Promedio', accessor: 'average', width: 80 },
-    { label: 'Cobertura', accessor: 'coverage', width: 80 },
-    { label: 'Progreso', accessor: 'progress', width: 80 },
-    { label: 'Completados', accessor: 'completions', width: 90 },
-    { label: 'Abandono', accessor: 'dropout', width: 80 },
-    { label: 'Foco débil', accessor: 'focus', width: 130 },
-    { label: 'Frecuencia', accessor: 'frequency', width: 82 },
+    { label: 'Estudiante', accessor: 'name', weight: 2.5 },
+    { label: 'Promedio', accessor: 'average', weight: 1.05 },
+    { label: 'Cobertura', accessor: 'coverage', weight: 1.05 },
+    { label: 'Progreso', accessor: 'progress', weight: 1.05 },
+    { label: 'Completados', accessor: 'completions', weight: 1.1 },
+    { label: 'Abandono', accessor: 'dropout', weight: 1.05 },
+    { label: 'Foco débil', accessor: 'focus', weight: 1.45 },
+    { label: 'Frecuencia', accessor: 'frequency', weight: 1.15 },
   ];
 
-  let currentX = marginX;
-  columns.forEach((col) => {
-    col.x = currentX + 8;
-    currentX += col.width;
+  const totalWeight = columns.reduce((sum, col) => sum + col.weight, 0);
+  let runningX = tableLeft;
+  columns.forEach((col, index) => {
+    const isLast = index === columns.length - 1;
+    const computedWidth = (tableWidth * col.weight) / totalWeight;
+    const width = isLast ? tableRight - runningX : Math.max(computedWidth, 60);
+    col.width = width;
+    col.startX = runningX;
+    col.textX = Math.round(runningX + 10);
+    runningX += col.width;
   });
 
   const addText = (text, x, y, size = 12, color = '0 0 0') => {
@@ -74,51 +84,54 @@ function buildTeacherReportPdf({ teacherName, history }) {
   drawRect(0, 0, pageWidth, pageHeight, '0.97 0.98 1');
   drawRect(0, bannerBottom, pageWidth, bannerHeight, '0.46 0.63 0.89');
 
-  const bannerTitleY = bannerBottom + bannerHeight - 40;
-  addText(systemName, marginX, bannerTitleY + 32, 16, '1 1 1');
-  addText(title, marginX, bannerTitleY + 10, 24, '1 1 1');
-  addText(subtitle, marginX, bannerTitleY - 12, 14, '1 1 1');
+  const bannerTitleY = bannerBottom + bannerHeight - 44;
+  addText(systemName, marginX, bannerTitleY + 34, 16, '1 1 1');
+  addText(title, marginX, bannerTitleY + 12, 24, '1 1 1');
+  addText(subtitle, marginX, bannerTitleY - 10, 14, '1 1 1');
 
-  const metaStartY = bannerBottom - 32;
+  const metaStartY = bannerBottom - 34;
   addText(generatedFor, marginX, metaStartY, 12);
   addText(generatedOn, marginX, metaStartY - 18, 12);
   addText(systemStamp, marginX, metaStartY - 36, 12);
 
-  const tableTop = metaStartY - 54;
-  const tableOuterTop = tableTop + rowHeight + 14;
-  const tableBottom = marginBottom;
-  const tableBackgroundWidth = pageWidth - 2 * (marginX - 20);
-  drawRect(marginX - 20, tableBottom, tableBackgroundWidth, tableOuterTop - tableBottom, '1 1 1');
-
+  const tableTop = metaStartY - 60;
   const tableHeaderBottom = tableTop - tableHeaderHeight;
-  const headerWidth = pageWidth - 2 * (marginX - 4);
-  drawRect(marginX - 4, tableHeaderBottom, headerWidth, tableHeaderHeight, '0.89 0.92 0.97');
-  drawLine(marginX - 4, tableOuterTop, pageWidth - (marginX - 4), tableOuterTop, '0.65 0.7 0.8');
-  drawLine(marginX - 4, tableHeaderBottom, pageWidth - (marginX - 4), tableHeaderBottom);
+  const tableBottom = marginBottom;
+
+  drawRect(tableLeft - 18, tableBottom - 16, tableWidth + 36, tableTop - tableBottom + 42, '1 1 1');
+  drawRect(tableLeft, tableHeaderBottom, tableWidth, tableHeaderHeight, '0.89 0.92 0.97');
+  drawLine(tableLeft, tableTop, tableRight, tableTop, '0.65 0.7 0.8');
+  drawLine(tableLeft, tableHeaderBottom, tableRight, tableHeaderBottom, '0.75 0.8 0.9');
 
   columns.forEach((col, index) => {
     if (index > 0) {
-      const dividerX = col.x - 8;
-      drawLine(dividerX, tableBottom, dividerX, tableTop, '0.85 0.88 0.94', 0.8);
+      drawLine(col.startX, tableBottom, col.startX, tableTop, '0.85 0.88 0.94', 0.8);
     }
-    addText(col.label, col.x, tableTop - 18, 12, '0.2 0.32 0.53');
+    addText(col.label, col.textX, tableTop - 20, 12, '0.2 0.32 0.53');
   });
+  drawLine(tableRight, tableBottom, tableRight, tableTop, '0.65 0.7 0.8');
 
-  let currentY = tableTop - rowHeight - 6;
+  let rowTop = tableHeaderBottom;
   history.forEach((row, rowIndex) => {
-    if (currentY < marginBottom + 12) return;
-    const isEven = rowIndex % 2 === 0;
-    if (isEven) {
-      drawRect(marginX - 4, currentY - 6, pageWidth - (marginX - 4) * 2, rowHeight, '0.96 0.97 1');
+    const nextRowBottom = rowTop - rowHeight;
+    if (nextRowBottom < tableBottom) {
+      return;
     }
+
+    if (rowIndex % 2 === 0) {
+      drawRect(tableLeft, nextRowBottom, tableWidth, rowHeight, '0.96 0.97 1');
+    }
+
+    const baseline = nextRowBottom + rowHeight - 10;
     columns.forEach((col) => {
       const value = row[col.accessor] ?? '—';
-      addText(value, col.x, currentY, 11);
+      addText(value, col.textX, baseline, 11);
     });
-    currentY -= rowHeight;
+
+    rowTop = nextRowBottom;
   });
 
-  drawLine(marginX - 4, tableBottom, pageWidth - (marginX - 4), tableBottom);
+  drawLine(tableLeft, tableBottom, tableRight, tableBottom, '0.75 0.8 0.9');
 
   addText('Datos de referencia para seguimiento pedagógico.', marginX, marginBottom - 24, 10, '0.35 0.35 0.4');
 
