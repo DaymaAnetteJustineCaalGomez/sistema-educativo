@@ -13,25 +13,32 @@ function escapePdfText(value) {
 function buildTeacherReportPdf({ teacherName, history }) {
   const title = 'Informe estudiantil';
   const subtitle = 'Currículo Nacional Base · Guatemala';
-  const generatedFor = `Generado para: ${teacherName}`;
+  const systemName = 'Sistema Educativo';
+  const generatedFor = `Docente: ${teacherName}`;
+  const timestamp = new Intl.DateTimeFormat('es-GT', {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(new Date());
+  const generatedOn = `Generado el: ${timestamp}`;
+  const systemStamp = `Sistema: ${systemName}`;
   const pageWidth = 842; // A4 landscape
   const pageHeight = 595;
   const marginX = 60;
-  const headerTop = pageHeight - 70;
+  const headerTop = pageHeight - 64;
   const subtitleTop = headerTop - 24;
   const generatedTop = subtitleTop - 18;
   const lineHeight = 18;
-  let currentY = generatedTop - 34;
+  let currentY = generatedTop - lineHeight * 3 - 16;
 
   const columns = [
     { label: 'Estudiante', accessor: 'name', width: 180 },
-    { label: 'Promedio', accessor: 'average', width: 80 },
-    { label: 'Cobertura', accessor: 'coverage', width: 80 },
-    { label: 'Progreso', accessor: 'progress', width: 80 },
-    { label: 'Completados', accessor: 'completions', width: 90 },
-    { label: 'Abandono', accessor: 'dropout', width: 80 },
+    { label: 'Promedio', accessor: 'average', width: 70 },
+    { label: 'Cobertura', accessor: 'coverage', width: 70 },
+    { label: 'Progreso', accessor: 'progress', width: 70 },
+    { label: 'Completados', accessor: 'completions', width: 80 },
+    { label: 'Abandono', accessor: 'dropout', width: 70 },
     { label: 'Foco débil', accessor: 'focus', width: 110 },
-    { label: 'Frecuencia', accessor: 'frequency', width: 90 },
+    { label: 'Frecuencia', accessor: 'frequency', width: 72 },
   ];
 
   let currentX = marginX;
@@ -41,10 +48,14 @@ function buildTeacherReportPdf({ teacherName, history }) {
   });
 
   const textBlocks = [
-    `BT /F1 20 Tf ${marginX} ${headerTop} Td (${escapePdfText(title)}) Tj ET`,
+    `BT /F1 18 Tf ${marginX} ${headerTop} Td (${escapePdfText(`${systemName} · ${title}`)}) Tj ET`,
     `BT /F1 12 Tf ${marginX} ${subtitleTop} Td (${escapePdfText(subtitle)}) Tj ET`,
-    `BT /F1 12 Tf ${marginX} ${generatedTop} Td (${escapePdfText(generatedFor)}) Tj ET`,
+    `BT /F1 11 Tf ${marginX} ${generatedTop} Td (${escapePdfText(generatedFor)}) Tj ET`,
+    `BT /F1 11 Tf ${marginX} ${generatedTop - lineHeight} Td (${escapePdfText(generatedOn)}) Tj ET`,
+    `BT /F1 11 Tf ${marginX} ${generatedTop - lineHeight * 2} Td (${escapePdfText(systemStamp)}) Tj ET`,
   ];
+
+  textBlocks.push(`${marginX} ${currentY + lineHeight} m ${pageWidth - marginX} ${currentY + lineHeight} l S`);
 
   const writeRow = (row, { bold = false } = {}) => {
     if (currentY < marginX) return;

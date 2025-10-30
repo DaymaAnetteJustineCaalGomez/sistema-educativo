@@ -20,6 +20,18 @@ const gradoNumToCode = (n) => ({ 1: "1B", 2: "2B", 3: "3B" }[Number(n)] || null)
 const buildSampleResources = (areaName, sourceUrl) => {
   const subject = areaName || "Área";
   const baseUrl = sourceUrl || "https://aprende.mineduc.gob.gt";
+  const ejercicios = [
+    {
+      title: `Cuestionario diagnóstico de ${subject}`,
+      url: baseUrl,
+      type: "Evaluación",
+    },
+    {
+      title: `Taller interactivo de ${subject}`,
+      url: baseUrl,
+      type: "Práctica guiada",
+    },
+  ];
   return {
     videos: [
       {
@@ -45,19 +57,122 @@ const buildSampleResources = (areaName, sourceUrl) => {
         description: "Secuencia sugerida de sesiones y actividades evaluables.",
       },
     ],
-    ejercicios: [
-      {
-        title: `Cuestionario diagnóstico de ${subject}`,
-        url: baseUrl,
-        type: "Evaluación",
-      },
-      {
-        title: `Taller interactivo de ${subject}`,
-        url: baseUrl,
-        type: "Práctica guiada",
-      },
-    ],
+    ejercicios,
+    cuestionarios: ejercicios,
   };
+};
+
+const toSentence = (text) => {
+  if (!text) return "";
+  const trimmed = String(text).trim();
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
+const splitSubtopics = (text) => {
+  if (!text) return [];
+  return String(text)
+    .split(/[\.;•\n-]/)
+    .map((item) => item.replace(/^[\s•-]+/, "").trim())
+    .filter(Boolean)
+    .map((item) => toSentence(item));
+};
+
+const buildActivitiesForTopic = (areaName, topicTitle, firstSubtopic) => {
+  const focus = firstSubtopic || topicTitle || areaName;
+  const base = areaName || "el área";
+  return [
+    {
+      tipo: "Actividad guiada",
+      descripcion: `Elabora un mapa conceptual sobre ${focus} utilizando los recursos proporcionados del CNB de ${base}.`,
+    },
+    {
+      tipo: "Evaluación rápida",
+      descripcion: `Resuelve el cuestionario sugerido para comprobar tu comprensión de ${focus} antes de avanzar al siguiente tema.`,
+    },
+  ];
+};
+
+const buildFeedbackForTopic = (topicTitle, areaName) => {
+  const focus = topicTitle || areaName || "este tema";
+  return `Si necesitas reforzar ${focus}, repasa los videos y lecturas sugeridas y vuelve a intentar la actividad de evaluación.`;
+};
+
+const assignResourcesToTopic = (resources, index) => {
+  if (!resources) return {};
+  const pick = (list) => {
+    if (!Array.isArray(list) || !list.length) return [];
+    const item = list[index % list.length];
+    return item ? [item] : [];
+  };
+  return {
+    videos: pick(resources.videos),
+    lecturas: pick(resources.lecturas),
+    cuestionarios: pick(resources.cuestionarios || resources.ejercicios),
+  };
+};
+
+const buildFallbackTopics = (areaName, resources) => {
+  const subject = areaName || "Curso";
+  return [
+    {
+      titulo: `${subject}: fundamentos`,
+      subtitulos: [
+        "Objetivos de aprendizaje",
+        "Conceptos clave",
+        "Vocabulario necesario",
+      ],
+      recursos: assignResourcesToTopic(resources, 0),
+      actividades: buildActivitiesForTopic(subject, `${subject}: fundamentos`, "conceptos clave"),
+      retroalimentacion: buildFeedbackForTopic(`${subject}: fundamentos`, subject),
+    },
+    {
+      titulo: `${subject}: aplicación práctica`,
+      subtitulos: [
+        "Resolución de ejercicios",
+        "Trabajo colaborativo",
+        "Autoevaluación",
+      ],
+      recursos: assignResourcesToTopic(resources, 1),
+      actividades: buildActivitiesForTopic(subject, `${subject}: aplicación práctica`, "resolución de ejercicios"),
+      retroalimentacion: buildFeedbackForTopic(`${subject}: aplicación práctica`, subject),
+    },
+  ];
+};
+
+const buildTopicsFromCompetencias = ({ areaName, competencias, resources }) => {
+  if (!Array.isArray(competencias) || !competencias.length) {
+    return buildFallbackTopics(areaName, resources);
+  }
+
+  return competencias.map((comp, index) => {
+    const subtopics = splitSubtopics(comp?.enunciado);
+    const tituloBase = comp?.codigo ? `${comp.codigo} · ${toSentence(subtopics[0] || comp.enunciado)}` : null;
+    const titulo = tituloBase || toSentence(comp?.enunciado) || `Tema ${index + 1}`;
+    return {
+      id: String(comp?._id || index),
+      codigo: comp?.codigo || null,
+      titulo,
+      subtitulos: subtopics,
+      recursos: assignResourcesToTopic(resources, index),
+      actividades: buildActivitiesForTopic(areaName, titulo, subtopics[0]),
+      retroalimentacion: buildFeedbackForTopic(titulo, areaName),
+    };
+  });
+};
+
+const buildGeneralActivities = (temas, areaName) => {
+  if (!Array.isArray(temas) || !temas.length) return [];
+  const subject = areaName || "el curso";
+  return temas.slice(0, 3).map((tema, index) => ({
+    tipo: `Seguimiento ${index + 1}`,
+    descripcion: `Comparte evidencias de tu avance en "${tema.titulo}" y reflexiona sobre qué necesitas reforzar antes de continuar con ${subject}.`,
+  }));
+};
+
+const buildGeneralFeedback = (areaName) => {
+  const subject = areaName || "el curso";
+  return `Recuerda que puedes repetir los cuestionarios y revisar las lecturas cuando necesites reforzar ${subject}. Cada tema debe dominarse antes de pasar al siguiente.`;
 };
 const fallbackAreasBasico = [
   "Comunicación y Lenguaje Idioma Español",
@@ -192,6 +307,19 @@ router.get("/basico/:grado/cursos/:areaId/contenidos", authRequired, async (req,
       .lean()
       .catch(() => []);
 
+    const recursos = buildSampleResources(area.nombre, area.fuente?.url);
+    const competenciasNormalizadas = competencias.map((comp) => ({
+      id: String(comp._id),
+      codigo: comp.codigo,
+      enunciado: comp.enunciado,
+    }));
+
+    const temas = buildTopicsFromCompetencias({
+      areaName: area.nombre,
+      competencias: competenciasNormalizadas,
+      resources: recursos,
+    });
+
     const response = {
       id: String(area._id || areaId),
       slug: area.slug || null,
@@ -199,12 +327,11 @@ router.get("/basico/:grado/cursos/:areaId/contenidos", authRequired, async (req,
       descripcion:
         area.descripcion ||
         `Colección de competencias, recursos y ejercicios de ${area.nombre || "esta área"} para ${code}.`,
-      competencias: competencias.map((comp) => ({
-        id: String(comp._id),
-        codigo: comp.codigo,
-        enunciado: comp.enunciado,
-      })),
-      recursos: buildSampleResources(area.nombre, area.fuente?.url),
+      competencias: competenciasNormalizadas,
+      recursos,
+      temas,
+      actividades: buildGeneralActivities(temas, area.nombre),
+      retroalimentacion: buildGeneralFeedback(area.nombre),
     };
 
     res.json(response);

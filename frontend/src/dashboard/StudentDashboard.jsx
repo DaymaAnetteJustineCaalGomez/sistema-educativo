@@ -30,6 +30,18 @@ function resolveCourseAverage(course) {
 function createSampleResources(areaName) {
   const subject = areaName || 'Área';
   const sampleUrl = 'https://aprende.mineduc.gob.gt';
+  const exercises = [
+    {
+      title: `Cuestionario diagnóstico de ${subject}`,
+      url: sampleUrl,
+      type: 'Evaluación',
+    },
+    {
+      title: `Taller interactivo de ${subject}`,
+      url: sampleUrl,
+      type: 'Práctica guiada',
+    },
+  ];
   return {
     videos: [
       {
@@ -55,19 +67,116 @@ function createSampleResources(areaName) {
         description: 'Secuencia sugerida de sesiones y actividades evaluables.',
       },
     ],
-    ejercicios: [
-      {
-        title: `Cuestionario diagnóstico de ${subject}`,
-        url: sampleUrl,
-        type: 'Evaluación',
-      },
-      {
-        title: `Taller interactivo de ${subject}`,
-        url: sampleUrl,
-        type: 'Práctica guiada',
-      },
-    ],
+    ejercicios: exercises,
+    cuestionarios: exercises,
   };
+}
+
+function sentenceCase(text) {
+  if (!text) return '';
+  const trimmed = String(text).trim();
+  if (!trimmed) return '';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function splitSubtopics(text) {
+  if (!text) return [];
+  return String(text)
+    .split(/[\.;•\n-]/)
+    .map((item) => item.replace(/^[\s•-]+/, '').trim())
+    .filter(Boolean)
+    .map((item) => sentenceCase(item));
+}
+
+function createActivitiesForTopic(areaName, topicTitle, firstSubtopic) {
+  const focus = firstSubtopic || topicTitle || areaName;
+  const subject = areaName || 'el curso';
+  return [
+    {
+      tipo: 'Actividad guiada',
+      descripcion: `Crea un resumen visual sobre ${focus} usando los recursos del CNB de ${subject}.`,
+    },
+    {
+      tipo: 'Evaluación rápida',
+      descripcion: `Resuelve el cuestionario sugerido para confirmar qué tanto dominas ${focus} antes de continuar.`,
+    },
+  ];
+}
+
+function createFeedbackForTopic(topicTitle, areaName) {
+  const focus = topicTitle || areaName || 'este tema';
+  return `Si aún tienes dudas en ${focus}, revisa los videos y lecturas recomendadas y vuelve a intentar las actividades hasta lograr el dominio.`;
+}
+
+function assignResourcesToTopic(resources, index) {
+  if (!resources) return {};
+  const pick = (list) => {
+    if (!Array.isArray(list) || !list.length) return [];
+    const item = list[index % list.length];
+    return item ? [item] : [];
+  };
+  return {
+    videos: pick(resources.videos),
+    lecturas: pick(resources.lecturas),
+    cuestionarios: pick(resources.cuestionarios || resources.ejercicios),
+  };
+}
+
+function buildFallbackTopics(areaName, resources) {
+  const subject = areaName || 'Curso';
+  return [
+    {
+      titulo: `${subject}: fundamentos`,
+      subtitulos: ['Objetivos de aprendizaje', 'Conceptos clave', 'Vocabulario necesario'],
+      recursos: assignResourcesToTopic(resources, 0),
+      actividades: createActivitiesForTopic(subject, `${subject}: fundamentos`, 'conceptos clave'),
+      retroalimentacion: createFeedbackForTopic(`${subject}: fundamentos`, subject),
+    },
+    {
+      titulo: `${subject}: aplicación práctica`,
+      subtitulos: ['Resolución de ejercicios', 'Trabajo colaborativo', 'Autoevaluación'],
+      recursos: assignResourcesToTopic(resources, 1),
+      actividades: createActivitiesForTopic(subject, `${subject}: aplicación práctica`, 'resolución de ejercicios'),
+      retroalimentacion: createFeedbackForTopic(`${subject}: aplicación práctica`, subject),
+    },
+  ];
+}
+
+function createTopicsFromCompetencias({ areaName, competencias, resources }) {
+  if (!Array.isArray(competencias) || !competencias.length) {
+    return buildFallbackTopics(areaName, resources);
+  }
+
+  return competencias.map((comp, index) => {
+    const subtitulos = splitSubtopics(comp?.enunciado);
+    const tituloBase = comp?.codigo
+      ? `${comp.codigo} · ${sentenceCase(subtitulos[0] || comp.enunciado)}`
+      : null;
+    const titulo = tituloBase || sentenceCase(comp?.enunciado) || `Tema ${index + 1}`;
+    return {
+      id: comp?.id || comp?._id || index,
+      codigo: comp?.codigo || null,
+      titulo,
+      subtitulos,
+      recursos: assignResourcesToTopic(resources, index),
+      actividades: createActivitiesForTopic(areaName, titulo, subtitulos[0]),
+      retroalimentacion: createFeedbackForTopic(titulo, areaName),
+    };
+  });
+}
+
+function buildGeneralActivities(topics, areaName) {
+  if (!Array.isArray(topics) || !topics.length) return [];
+  const subject = areaName || 'el curso';
+  return topics.slice(0, 3).map((topic, index) => ({
+    tipo: `Seguimiento ${index + 1}`,
+    descripcion: `Comparte cómo aplicaste "${topic.titulo}" y qué necesitas reforzar antes de avanzar en ${subject}.`,
+  }));
+}
+
+function createGeneralFeedback(areaName) {
+  const subject = areaName || 'el curso';
+  return `Refuerza tus aprendizajes repasando las lecturas y videos del CNB cuando lo necesites. Domina cada tema antes de continuar con ${subject}.`;
 }
 
 function StudentMetrics({ metrics, sectionId }) {
@@ -131,6 +240,12 @@ function CourseContentDialog({
   if (!open) return null;
 
   const title = course?.titulo || course?.area || 'Área sin nombre';
+  const topics = Array.isArray(content?.temas) ? content.temas : [];
+  const generalActivities = Array.isArray(content?.actividades) ? content.actividades : [];
+  const courseVideos = content?.recursos?.videos || [];
+  const courseLecturas = content?.recursos?.lecturas || [];
+  const courseCuestionarios =
+    content?.recursos?.cuestionarios || content?.recursos?.ejercicios || [];
 
   return (
     <div className="dashboard-modal" role="dialog" aria-modal="true" aria-labelledby="curso-detalle-titulo">
@@ -179,72 +294,232 @@ function CourseContentDialog({
               )}
             </section>
 
+            <section className="course-detail__topics">
+              <h3>Temas y subtemas</h3>
+              {topics.length ? (
+                <div className="course-topics">
+                  {topics.map((topic, index) => {
+                    const videos = topic?.recursos?.videos || [];
+                    const lecturas = topic?.recursos?.lecturas || [];
+                    const cuestionarios = topic?.recursos?.cuestionarios || [];
+                    return (
+                      <article className="course-topic" key={topic.id || topic.titulo || index}>
+                        <div className="course-topic__header">
+                          <h4>{topic.titulo}</h4>
+                          {topic.codigo ? <span className="course-topic__code">{topic.codigo}</span> : null}
+                        </div>
+
+                        {topic.subtitulos?.length ? (
+                          <div className="course-topic__subtopics">
+                            <h5>Subtemas</h5>
+                            <ul>
+                              {topic.subtitulos.map((sub) => (
+                                <li key={sub}>{sub}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        <div className="course-topic__resources">
+                          <h5>Recursos recomendados</h5>
+                          <div className="course-topic__resource-groups">
+                            <div>
+                              <span className="resource-pill">Videos</span>
+                              {videos.length ? (
+                                <ul>
+                                  {videos.map((video) => (
+                                    <li key={video.title}>
+                                      <div>
+                                        <span className="resource-title">{video.title}</span>
+                                        {video.duration ? (
+                                          <span className="resource-meta">{video.duration}</span>
+                                        ) : null}
+                                      </div>
+                                      <a
+                                        href={video.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="link-inline"
+                                      >
+                                        Ver video
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="student-empty">Agrega videos desde el CNB.</p>
+                              )}
+                            </div>
+                            <div>
+                              <span className="resource-pill">Lecturas</span>
+                              {lecturas.length ? (
+                                <ul>
+                                  {lecturas.map((item) => (
+                                    <li key={item.title}>
+                                      <div>
+                                        <span className="resource-title">{item.title}</span>
+                                        {item.description ? (
+                                          <span className="resource-meta">{item.description}</span>
+                                        ) : null}
+                                      </div>
+                                      <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="link-inline"
+                                      >
+                                        Abrir recurso
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="student-empty">Agrega lecturas desde tu biblioteca.</p>
+                              )}
+                            </div>
+                            <div>
+                              <span className="resource-pill">Cuestionarios</span>
+                              {cuestionarios.length ? (
+                                <ul>
+                                  {cuestionarios.map((item) => (
+                                    <li key={item.title}>
+                                      <div>
+                                        <span className="resource-title">{item.title}</span>
+                                        {item.type ? <span className="resource-meta">{item.type}</span> : null}
+                                      </div>
+                                      <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="link-inline"
+                                      >
+                                        Resolver
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="student-empty">Incluye evaluaciones para medir tu comprensión.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {topic.actividades?.length ? (
+                          <div className="course-topic__activities">
+                            <h5>Actividades sugeridas</h5>
+                            <ul>
+                              {topic.actividades.map((activity) => (
+                                <li key={activity.descripcion}>
+                                  <strong>{activity.tipo}</strong>
+                                  <span>{activity.descripcion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {topic.retroalimentacion ? (
+                          <div className="course-topic__feedback">
+                            <h5>Retroalimentación</h5>
+                            <p>{topic.retroalimentacion}</p>
+                          </div>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="student-empty">Pronto verás los temas del CNB organizados aquí.</p>
+              )}
+            </section>
+
             <section className="course-detail__resources">
-              <div>
-                <h3>Videos</h3>
-                {content.recursos?.videos?.length ? (
-                  <ul>
-                    {content.recursos.videos.map((video) => (
-                      <li key={video.title}>
-                        <div>
-                          <span className="resource-title">{video.title}</span>
-                          {video.duration ? (
-                            <span className="resource-meta">{video.duration}</span>
-                          ) : null}
-                        </div>
-                        <a href={video.url} target="_blank" rel="noreferrer" className="link-inline">
-                          Ver video
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="student-empty">Pronto encontrarás videos sugeridos aquí.</p>
-                )}
-              </div>
-              <div>
-                <h3>Lecturas y guías</h3>
-                {content.recursos?.lecturas?.length ? (
-                  <ul>
-                    {content.recursos.lecturas.map((item) => (
-                      <li key={item.title}>
-                        <div>
-                          <span className="resource-title">{item.title}</span>
-                          {item.description ? (
-                            <span className="resource-meta">{item.description}</span>
-                          ) : null}
-                        </div>
-                        <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
-                          Abrir recurso
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="student-empty">Agrega lecturas y guías desde tu biblioteca.</p>
-                )}
-              </div>
-              <div>
-                <h3>Ejercicios</h3>
-                {content.recursos?.ejercicios?.length ? (
-                  <ul>
-                    {content.recursos.ejercicios.map((item) => (
-                      <li key={item.title}>
-                        <div>
-                          <span className="resource-title">{item.title}</span>
-                          {item.type ? <span className="resource-meta">{item.type}</span> : null}
-                        </div>
-                        <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
-                          Resolver
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="student-empty">Integra evaluaciones y prácticas desde tu plan de clase.</p>
-                )}
+              <h3>Recursos del curso</h3>
+              <div className="course-detail__resource-columns">
+                <div>
+                  <h4>Videos</h4>
+                  {courseVideos.length ? (
+                    <ul>
+                      {courseVideos.map((video) => (
+                        <li key={video.title}>
+                          <div>
+                            <span className="resource-title">{video.title}</span>
+                            {video.duration ? <span className="resource-meta">{video.duration}</span> : null}
+                          </div>
+                          <a href={video.url} target="_blank" rel="noreferrer" className="link-inline">
+                            Ver video
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="student-empty">Pronto encontrarás videos sugeridos aquí.</p>
+                  )}
+                </div>
+                <div>
+                  <h4>Lecturas y guías</h4>
+                  {courseLecturas.length ? (
+                    <ul>
+                      {courseLecturas.map((item) => (
+                        <li key={item.title}>
+                          <div>
+                            <span className="resource-title">{item.title}</span>
+                            {item.description ? <span className="resource-meta">{item.description}</span> : null}
+                          </div>
+                          <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
+                            Abrir recurso
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="student-empty">Agrega lecturas y guías desde tu biblioteca.</p>
+                  )}
+                </div>
+                <div>
+                  <h4>Cuestionarios</h4>
+                  {courseCuestionarios.length ? (
+                    <ul>
+                      {courseCuestionarios.map((item) => (
+                        <li key={item.title}>
+                          <div>
+                            <span className="resource-title">{item.title}</span>
+                            {item.type ? <span className="resource-meta">{item.type}</span> : null}
+                          </div>
+                          <a href={item.url} target="_blank" rel="noreferrer" className="link-inline">
+                            Resolver
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="student-empty">Integra evaluaciones y prácticas desde tu plan de clase.</p>
+                  )}
+                </div>
               </div>
             </section>
+
+            {generalActivities.length ? (
+              <section className="course-detail__activities">
+                <h3>Actividades de seguimiento</h3>
+                <ul>
+                  {generalActivities.map((activity, index) => (
+                    <li key={activity.descripcion || index}>
+                      <strong>{activity.tipo}</strong>
+                      <span>{activity.descripcion}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {content.retroalimentacion ? (
+              <section className="course-detail__feedback">
+                <h3>Retroalimentación recomendada</h3>
+                <p>{content.retroalimentacion}</p>
+              </section>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -292,9 +567,9 @@ function StudentCourseGrid({
                 type="button"
                 className="course-card__button"
                 onClick={() => onViewContent?.(course)}
-                disabled={contentLoading && activeCourseId === course?._id}
+                disabled={contentLoading && activeCourseId === (course?._id || course?.slug)}
               >
-                Ver contenidos
+                Ver contenido
               </button>
             </article>
           );
@@ -443,6 +718,7 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
           ? payload.competencias
           : [];
         const safeRecursos = payload?.recursos || {};
+        const courseName = course?.titulo || course?.area;
         const recursos = {
           videos:
             Array.isArray(safeRecursos.videos) && safeRecursos.videos.length
@@ -456,16 +732,67 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
             Array.isArray(safeRecursos.ejercicios) && safeRecursos.ejercicios.length
               ? safeRecursos.ejercicios
               : sample.ejercicios,
+          cuestionarios:
+            Array.isArray(safeRecursos.cuestionarios) && safeRecursos.cuestionarios.length
+              ? safeRecursos.cuestionarios
+              : sample.cuestionarios,
         };
 
+        const providedTopics = Array.isArray(payload?.temas) ? payload.temas : [];
+        const baseTopics = providedTopics.length
+          ? providedTopics
+          : createTopicsFromCompetencias({ areaName: courseName, competencias: safeCompetencias, resources: recursos });
+
+        const normalizedTopics = baseTopics.map((topic, index) => {
+          const subtitulos = Array.isArray(topic?.subtitulos) ? topic.subtitulos : [];
+          const topicResources = topic?.recursos || {};
+          const fallbackResources = assignResourcesToTopic(recursos, index);
+          return {
+            id: topic?.id || topic?.codigo || index,
+            codigo: topic?.codigo || null,
+            titulo: topic?.titulo || `Tema ${index + 1}`,
+            subtitulos,
+            recursos: {
+              videos:
+                Array.isArray(topicResources.videos) && topicResources.videos.length
+                  ? topicResources.videos
+                  : fallbackResources.videos,
+              lecturas:
+                Array.isArray(topicResources.lecturas) && topicResources.lecturas.length
+                  ? topicResources.lecturas
+                  : fallbackResources.lecturas,
+              cuestionarios:
+                Array.isArray(topicResources.cuestionarios) && topicResources.cuestionarios.length
+                  ? topicResources.cuestionarios
+                  : fallbackResources.cuestionarios,
+            },
+            actividades:
+              Array.isArray(topic?.actividades) && topic.actividades.length
+                ? topic.actividades
+                : createActivitiesForTopic(courseName, topic?.titulo || `Tema ${index + 1}`, subtitulos[0]),
+            retroalimentacion:
+              topic?.retroalimentacion || createFeedbackForTopic(topic?.titulo || `Tema ${index + 1}`, courseName),
+          };
+        });
+
+        const generalActivities =
+          Array.isArray(payload?.actividades) && payload.actividades.length
+            ? payload.actividades
+            : buildGeneralActivities(normalizedTopics, courseName);
+
+        const generalFeedback = payload?.retroalimentacion || createGeneralFeedback(courseName);
+
         setCourseContent({
-          titulo: payload?.titulo || course?.titulo || course?.area,
+          titulo: payload?.titulo || courseName,
           descripcion:
             payload?.descripcion ||
             course?.descripcion ||
-            `Recursos disponibles para ${course?.titulo || course?.area}.`,
+            `Recursos disponibles para ${courseName}.`,
           competencias: safeCompetencias,
           recursos,
+          temas: normalizedTopics,
+          actividades: generalActivities,
+          retroalimentacion: generalFeedback,
         });
       } catch (err) {
         setCourseContentError(err.message || 'No se pudieron cargar los contenidos.');
@@ -492,35 +819,8 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
   return (
     <div className="dashboard dashboard--student">
       <DashboardHeader user={user} badge={gradeLabel} onLogout={onLogout} />
-      <div className="dashboard-layout">
-        <main className="dashboard-main">
-          <StudentCourseGrid
-            sectionId="tablero-cursos"
-            courses={courses}
-            loading={loading}
-            error={error}
-            onRefresh={handleRefresh}
-            onViewContent={handleLoadContent}
-            activeCourseId={activeCourse ? activeCourse._id || activeCourse.slug : null}
-            contentLoading={courseContentLoading}
-          />
-
-          <StudentMetrics sectionId="metricas" metrics={metrics} />
-
-          <StudentRecommendations
-            sectionId="recomendaciones"
-            latest={latestRecommendation}
-            history={recommendationHistory}
-          />
-
-          <StudentAttempts
-            sectionId="intentos"
-            attemptsLeft={attemptsLeft}
-            totalAttempts={totalAttempts}
-          />
-        </main>
-
-        <aside className="dashboard-aside">
+      <div className="dashboard-layout dashboard-layout--student">
+        <aside className="dashboard-aside dashboard-aside--student">
           <section className="dashboard-hero-card">
             <p className="dashboard-hero__eyebrow">Bienvenido(a) · {gradeLabel}</p>
             <h1>Hola, {firstName}</h1>
@@ -555,6 +855,33 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
             </button>
           </section>
         </aside>
+
+        <main className="dashboard-main">
+          <StudentCourseGrid
+            sectionId="tablero-cursos"
+            courses={courses}
+            loading={loading}
+            error={error}
+            onRefresh={handleRefresh}
+            onViewContent={handleLoadContent}
+            activeCourseId={activeCourse ? activeCourse._id || activeCourse.slug : null}
+            contentLoading={courseContentLoading}
+          />
+
+          <StudentMetrics sectionId="metricas" metrics={metrics} />
+
+          <StudentRecommendations
+            sectionId="recomendaciones"
+            latest={latestRecommendation}
+            history={recommendationHistory}
+          />
+
+          <StudentAttempts
+            sectionId="intentos"
+            attemptsLeft={attemptsLeft}
+            totalAttempts={totalAttempts}
+          />
+        </main>
       </div>
       <CourseContentDialog
         open={Boolean(activeCourse)}
