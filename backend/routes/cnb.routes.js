@@ -3,6 +3,7 @@ import { Router } from "express";
 import { authRequired } from "../middlewares/auth.middleware.js";
 import CNBArea from "../models/CNB_Area.js";
 import CNBCompetencia from "../models/CNB_Competencia.js";
+import { getCuratedContentForArea } from "./cnbCuratedContent.js";
 
 // Si más adelante vinculas Recurso con el área, podrás contar recursos aquí
 let Recurso = null;
@@ -307,31 +308,44 @@ router.get("/basico/:grado/cursos/:areaId/contenidos", authRequired, async (req,
       .lean()
       .catch(() => []);
 
-    const recursos = buildSampleResources(area.nombre, area.fuente?.url);
+    const curated = getCuratedContentForArea(area);
+    const curatedResources = curated?.recursos || curated?.resources || null;
+    const recursos =
+      curatedResources || buildSampleResources(area.nombre, curated?.sourceUrl || area.fuente?.url);
     const competenciasNormalizadas = competencias.map((comp) => ({
       id: String(comp._id),
       codigo: comp.codigo,
       enunciado: comp.enunciado,
     }));
 
-    const temas = buildTopicsFromCompetencias({
-      areaName: area.nombre,
-      competencias: competenciasNormalizadas,
-      resources: recursos,
-    });
+    const temas =
+      curated?.temas ||
+      buildTopicsFromCompetencias({
+        areaName: area.nombre,
+        competencias: competenciasNormalizadas,
+        resources: recursos,
+      });
+
+    const actividadesGenerales =
+      curated?.actividadesGenerales || buildGeneralActivities(temas, area.nombre);
+    const retroalimentacionGeneral =
+      curated?.retroalimentacionGeneral || buildGeneralFeedback(area.nombre);
+
+    const descripcionDetallada =
+      curated?.descripcion ||
+      area.descripcion ||
+      `Colección de competencias, recursos y ejercicios de ${area.nombre || "esta área"} para ${code}.`;
 
     const response = {
       id: String(area._id || areaId),
       slug: area.slug || null,
       titulo: area.nombre || area.slug || "Área sin nombre",
-      descripcion:
-        area.descripcion ||
-        `Colección de competencias, recursos y ejercicios de ${area.nombre || "esta área"} para ${code}.`,
+      descripcion: descripcionDetallada,
       competencias: competenciasNormalizadas,
       recursos,
       temas,
-      actividades: buildGeneralActivities(temas, area.nombre),
-      retroalimentacion: buildGeneralFeedback(area.nombre),
+      actividades: actividadesGenerales,
+      retroalimentacion: retroalimentacionGeneral,
     };
 
     res.json(response);
