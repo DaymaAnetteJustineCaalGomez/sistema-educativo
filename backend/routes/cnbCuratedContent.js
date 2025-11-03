@@ -818,61 +818,61 @@ const CURATED_DATA = {
   },
   "culturas-idiomas": {
     aliases: ["Culturas e Idiomas Maya, Garífuna o Xinca"],
-    sourceUrl: "https://almg.org.gt/",
+    sourceUrl: "https://cnbguatemala.org/wiki/CNB_Ciclo_B%C3%A1sico/Culturas_e_Idiomas_Maya,_Gar%C3%ADfuna_o_Xinca",
     descripcion:
       "Recursos que visibilizan la diversidad lingüística y cultural de Guatemala y promueven el respeto intercultural.",
     resources: {
       videos: [
         {
-          title: "Cosmovisión maya y calendario",
-          url: "https://www.youtube.com/watch?v=J9ZhDJW60yc",
-          duration: "12:14",
-          source: "Academia de Lenguas Mayas de Guatemala",
+          title: "Los ciclos en la cosmovisión maya",
+          url: "https://youtu.be/8Zwgux0nGXk?si=RP0BUWHI07s4IQUq",
+          duration: "2:34",
+          source: "Hunub ku",
         },
         {
-          title: "Idioma garífuna: frases básicas",
-          url: "https://www.youtube.com/watch?v=_yBqXc9EwTk",
-          duration: "07:02",
-          source: "Garifuna Language",
+          title: "Palabras En La Lengua Del Pueblo Garífuna",
+          url: "https://youtu.be/EgO2GyjZ_nI?si=PGe7NcW6Orv6Wp7v",
+          duration: "03:03",
+          source: "Eli laBan",
         },
         {
-          title: "Idioma xinka: saludos y vocabulario",
-          url: "https://www.youtube.com/watch?v=sv9Qhj6k2x4",
-          duration: "06:18",
-          source: "Academia de Lenguas Mayas",
+          title: "¡Aprendamos EL IDIOMA XINKA - Vocabulario de La Familia!",
+          url: "https://youtu.be/EOuswZQHPOQ?si=ROYX5-JmnKVkQobV",
+          duration: "01:11",
+          source: "Maestro innovando idiomas",
         },
       ],
       lecturas: [
         {
           title: "Cosmovisión maya",
-          url: "https://almg.org.gt/wp-content/uploads/2020/07/Cosmovision-Maya.pdf",
-          description: "Documento oficial de la Academia de Lenguas Mayas sobre principios y valores.",
+          url: "https://gomundomaya.com/cosmovision/",
+          description: "Definciond e la cosmovision maya.",
         },
         {
-          title: "Manual introductorio del idioma garífuna",
-          url: "https://www.rree.gob.gt/docs/2018/idiomasnacionales/ManualIdiomaGarifuna.pdf",
-          description: "Compendio básico con vocabulario, pronunciación y expresiones cotidianas.",
+          title: "idioma garífuna",
+          url: "https://es.scribd.com/document/159227084/Idioma-de-Los-Garifunas",
+          description: "El documento describe el idioma Garífuna.",
         },
         {
           title: "Pueblos originarios de Guatemala",
-          url: "https://cnb.mineduc.gob.gt/index.php?title=Culturas_e_Idiomas_Maya,_Gar%C3%ADfuna_y_Xinca",
-          description: "Resumen curricular y sugerencias para valorar la diversidad lingüística del país.",
+          url: "https://aprende.guatemala.com/cultura-guatemalteca/etnias/pueblos-originarios-de-guatemala/",
+          description: "aprende sobre los pueblos originarios de guatemala.",
         },
       ],
       cuestionarios: [
         {
           title: "Cultura maya: símbolos y significados",
-          url: "https://www.educaplay.com/recursos-educativos/13289105-cultura_maya.html",
+          url: "https://wayground.com/admin/quiz/672cf4dad66a7860abaa8737/simbolismo-en-la-cultura-maya",
           type: "Quiz interactivo",
         },
         {
           title: "Lengua garífuna: vocabulario básico",
-          url: "https://www.liveworksheets.com/worksheets/es/Gar%C3%ADfuna/Vocabulario/Idioma_gar%C3%ADfuna_b%C3%A1sico_pu1849608ux",
+          url: "https://es.scribd.com/document/376288795/Vocabulario-Garifuna-Arina",
           type: "Práctica guiada",
         },
         {
           title: "Pueblos xinka y garífuna",
-          url: "https://www.educaplay.com/recursos-educativos/13289134-pueblos_originarios_de_guatemala.html",
+          url: "https://es.scribd.com/document/749599129/CEEX-2-Etapa-evaluacion-Cultura-e-Idioma-Maya-Garifuna-o-Xinka-Formularios-de-Google",
           type: "Evaluación",
         },
       ],
@@ -977,62 +977,62 @@ const CURATED_DATA = {
   },
   "educacion-artistica": {
     aliases: ["Educación Artística"],
-    sourceUrl: "https://www.mineduc.gob.gt/curriculonacionalbasico/",
+    sourceUrl: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Educacion-Artistica-Ciclo-basico-1.pdf",
     descripcion:
       "Recursos audiovisuales y guías para integrar artes visuales, música y teatro en proyectos expresivos.",
     resources: {
       videos: [
         {
           title: "Los elementos del arte",
-          url: "https://www.youtube.com/watch?v=mXv0F2PzX_E",
-          duration: "06:55",
-          source: "Arte Divierte",
+          url: "https://youtu.be/5ydd0WRSLjs?si=j70EQNrAqATJ6t8j",
+          duration: "12:11",
+          source: "Art with Ms.mann",
         },
         {
-          title: "Introducción a la apreciación musical",
-          url: "https://www.youtube.com/watch?v=Vuqb0MGANM0",
-          duration: "08:10",
-          source: "Musikarte",
+          title: "apreciación musical efectiva",
+          url: "https://youtu.be/r0sBhkeUYf4?si=q77jBW7OEWfQDbCH",
+          duration: "05:29",
+          source: "educarchile",
         },
         {
-          title: "Principios básicos del teatro escolar",
-          url: "https://www.youtube.com/watch?v=ROhR8qxabvU",
-          duration: "07:44",
-          source: "Teatro en Corto",
+          title: "¿Qué es el TEATRO y cuáles son sus elementos? Características y tipos",
+          url: "https://youtu.be/OdzNr0pzoC0?si=HXpcNejP5KodGAb1",
+          duration: "07:19",
+          source: "astraway",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Educación Artística",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/07_Educacion_Artistica.pdf",
+          url: "https://cnbguatemala.org/wiki/CNB_Ciclo_B%C3%A1sico/Educaci%C3%B3n_Art%C3%ADstica",
           description:
             "Orientaciones curriculares para artes visuales, música, danza y teatro.",
         },
         {
           title: "Elementos del arte visual",
-          url: "https://artsandculture.google.com/story/los-elementos-del-arte/5wICwXN_tKzCJQ",
-          description: "Recorrido interactivo con ejemplos visuales de líneas, formas y colores.",
+          url: "https://es.slideshare.net/slideshow/elementos-del-arte-visual/2381007#2",
+          description: "presentacion de los elementos del arte.",
         },
         {
           title: "Guía de apreciación musical",
-          url: "https://bibliotecadigital.ilce.edu.mx/Colecciones/Documentos/Diccionario_Musical/guia_apreciacion.pdf",
+          url: "https://eduardolozowsky.com/apreciacion-musical-lozowsky/",
           description: "Documento con conceptos básicos de ritmo, melodía y armonía.",
         },
       ],
       cuestionarios: [
         {
           title: "Elementos del arte",
-          url: "https://www.educaplay.com/recursos-educativos/13289123-elementos_del_arte.html",
+          url: "https://quizlet.com/pr/422324472/elementos-del-arte-flash-cards/",
           type: "Quiz interactivo",
         },
         {
           title: "Instrumentos y familias",
-          url: "https://www.liveworksheets.com/worksheets/es/M%C3%BAsica/Instrumentos_musicales/Instrumentos_musicales_tg1530209mu",
+          url: "https://teachy.ai/es/plan-de-leccion/contenido/familias-de-instrumentos-musicales",
           type: "Práctica guiada",
         },
         {
           title: "Técnicas teatrales básicas",
-          url: "https://www.educaplay.com/recursos-educativos/13289153-teatro_y_expersion_corporal.html",
+          url: "https://www.epnewman.edu.pe/revista/ciencias-sociales/tecnicas-teatrales/",
           type: "Evaluación",
         },
       ],
@@ -1137,34 +1137,34 @@ const CURATED_DATA = {
   },
   "educacion-fisica": {
     aliases: ["Educación Física"],
-    sourceUrl: "https://www.mineduc.gob.gt/curriculonacionalbasico/",
+    sourceUrl: "https://www.munideporte.com/imagenes/documentacion/ficheros/20101124173147anexo_plan_csd.pdf",
     descripcion:
       "Recursos para planificar sesiones activas, seguras y saludables que fortalezcan la condición física integral.",
     resources: {
       videos: [
         {
           title: "Rutina de calentamiento general",
-          url: "https://www.youtube.com/watch?v=VQwJ6yIO5uY",
-          duration: "06:15",
-          source: "Profe en Casa",
+          url: "https://youtu.be/MPzfQMxrjdQ?si=IFirXJYUI53DhGF1",
+          duration: "05:34",
+          source: "viviendo fit",
         },
         {
           title: "Circuito de fuerza y resistencia",
-          url: "https://www.youtube.com/watch?v=pkcL3ZL6kq8",
-          duration: "10:20",
-          source: "Entrena con Jeison",
+          url: "https://youtu.be/NeQ61BhNO60?si=uoHSL69ouI9svLWo",
+          duration: "11:43",
+          source: "Deportesuncomo",
         },
         {
           title: "Estiramientos y flexibilidad",
-          url: "https://www.youtube.com/watch?v=5XH4sM7tpcE",
-          duration: "08:33",
-          source: "XHIT Daily Español",
+          url: "https://youtu.be/xNXcOU8lM2s?si=uAsI2eTYGNRDp5FR",
+          duration: "16:16",
+          source: "gym virtual",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Educación Física",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/08_Educacion_Fisica.pdf",
+          url: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Educacion-Fisica-Ciclo-Basico-1.pdf",
           description:
             "Lineamientos curriculares con competencias motrices, actitudinales y de salud integral.",
         },
@@ -1175,24 +1175,24 @@ const CURATED_DATA = {
         },
         {
           title: "Beneficios del ejercicio para jóvenes",
-          url: "https://www.cdc.gov/spanish/physicalactivity/basics/children/index.htm",
-          description: "Artículo de los CDC con pautas y beneficios de la actividad física regular.",
+          url: "https://www.stanfordchildrens.org/es/topic/default?id=exercise-and-teenagers-90-P04702",
+          description: "Pagina para el ejercicio para los jovenes",
         },
       ],
       cuestionarios: [
         {
           title: "Capacidades físicas básicas",
-          url: "https://www.educaplay.com/recursos-educativos/13289182-capacidades_fisicas_basicas.html",
+          url: "https://es.educaplay.com/recursos-educativos/3786541-capacidades_fisicas_basicas.html",
           type: "Quiz interactivo",
         },
         {
           title: "Planificación de calentamiento",
-          url: "https://www.liveworksheets.com/worksheets/es/Educaci%C3%B3n_f%C3%ADsica/Calentamiento/Calentamiento_general_us2273895tu",
+          url: "https://es.scribd.com/document/669038129/PROGRAMA-DE-CALENTAMIENTO",
           type: "Práctica guiada",
         },
         {
           title: "Hábitos saludables",
-          url: "https://www.educaplay.com/recursos-educativos/13289201-habitos_saludables.html",
+          url: "https://colegiolainmaculada.com/downloads/5p-test-de-habitos-saludables.pdf",
           type: "Evaluación",
         },
       ],
@@ -1297,63 +1297,63 @@ const CURATED_DATA = {
   },
   "emprendimiento": {
     aliases: ["Emprendimiento para la Productividad"],
-    sourceUrl: "https://www.mineduc.gob.gt/curriculonacionalbasico/",
+    sourceUrl: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Emprendimiento-para-la-Productividad-Ciclo-Basico-2.pdf",
     descripcion:
       "Recursos para impulsar iniciativas emprendedoras con enfoque en modelo de negocio, finanzas e innovación.",
     resources: {
       videos: [
         {
           title: "Cómo utilizar el modelo Canvas",
-          url: "https://www.youtube.com/watch?v=0q7O3JkB1Bw",
-          duration: "09:57",
-          source: "EmprendeAprendiendo",
+          url: "https://youtu.be/i1Le5GYkBT8?si=m0NR27ioswtItm-h",
+          duration: "09:36",
+          source: "trabajar desde casa",
         },
         {
           title: "Educación financiera para emprendedores",
-          url: "https://www.youtube.com/watch?v=6tLJ9V1sC9U",
-          duration: "08:50",
-          source: "Banco Interamericano de Desarrollo",
+          url: "https://youtu.be/29iU2NA0rDQ?si=VR4KuS_8m_95eOyY",
+          duration: "11:55",
+          source: "better wallet en español",
         },
         {
           title: "Introducción al design thinking",
-          url: "https://www.youtube.com/watch?v=MjKPP_wBJ38",
-          duration: "07:18",
-          source: "Crehana",
+          url: "https://youtu.be/LeoEnRjAYM0?si=8aqp6VcTaxNrSCKt",
+          duration: "08:34",
+          source: "IEBS BUSINESS SCHOOL",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Emprendimiento para la Productividad",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/09_Emprendimiento_para_la_Productividad.pdf",
+          url: "https://cnbguatemala.org/wiki/CNB_Ciclo_B%C3%A1sico/Emprendimiento_para_la_Productividad",
           description:
             "Marco curricular con competencias de emprendimiento e innovación para ciclo básico.",
         },
         {
           title: "Manual para emprendedores",
-          url: "https://www.bancomundial.org/es/topic/smefinance/publication/manual-para-emprendedores",
+          url: "https://www.jica.go.jp/Resource/paraguay/espanol/office/others/c8h0vm0000ad5gke-att/info_11_01.pdf",
           description: "Guía del Banco Mundial con herramientas para desarrollar ideas de negocio.",
         },
         {
           title: "Guía práctica de educación financiera",
-          url: "https://www.usaid.gov/sites/default/files/2022-05/Guia_para_emprendedores.pdf",
+          url: "https://www.enif.gt/wp-content/uploads/2025/02/Guia-del-docente-Programa-de-educacion-financiera-BR-003.pdf",
           description: "Documento con conceptos clave de finanzas personales y presupuestos.",
         },
       ],
       cuestionarios: [
         {
           title: "Canvas model challenge",
-          url: "https://www.educaplay.com/recursos-educativos/13289235-plan_de_negocios.html",
+          url: "https://es.educaplay.com/recursos-educativos/17882969-quiz_del_modelo_canvas.html",
           type: "Quiz interactivo",
         },
         {
           title: "Presupuesto y flujo de caja",
-          url: "https://www.liveworksheets.com/worksheets/es/Emprendimiento/Presupuesto/Presupuesto_empresarial_jp2143954gz",
+          url: "https://www.studocu.com/es-mx/document/universidad-del-desarrollo-profesional/plan-de-negocios/ejemplos-de-ejercicios-de-flujo-de-efectivo-explicados-modelo-ejercicio-de-presupuesto-de-caja/35026736",
           type: "Práctica guiada",
         },
         {
           title: "Pensamiento creativo",
-          url: "https://www.educaplay.com/recursos-educativos/13289257-design_thinking.html",
-          type: "Evaluación",
+          url: "https://es.educaplay.com/recursos-educativos/4007717-pensamiento_creativo.html",
+          type: "quizz",
         },
       ],
     },
@@ -1460,62 +1460,62 @@ const CURATED_DATA = {
   },
   "tecnologias-aprendizaje": {
     aliases: ["Tecnologías del Aprendizaje y la Comunicación"],
-    sourceUrl: "https://www.mineduc.gob.gt/curriculonacionalbasico/",
+    sourceUrl: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Tecnologias-del-Aprendizaje-y-la-Comunicacion-Ciclo-Basico-1.pdf",
     descripcion:
       "Recursos para fortalecer la ciudadanía digital, la seguridad informática y la producción multimedia colaborativa.",
     resources: {
       videos: [
         {
-          title: "Alfabetización digital y ciudadanía",
-          url: "https://www.youtube.com/watch?v=DFKShYPWqsI",
-          duration: "08:30",
-          source: "Common Sense Education",
+          title: "Alfabetización digital y ciudadanía digital",
+          url: "https://youtu.be/KIETTvojFW4?si=796WAzDg6_bxF90A",
+          duration: "03:04",
+          source: "leo condori",
         },
         {
-          title: "Seguridad digital y contraseñas",
-          url: "https://www.youtube.com/watch?v=xsVXFDl1C5A",
-          duration: "07:12",
-          source: "INCIBE",
+          title: "Ciberseguridad: Contraseñas seguras",
+          url: "https://youtu.be/boQKl5BkPfs?si=CYDnNWUgISB51ngp",
+          duration: "02:36",
+          source: "AltumX Studios",
         },
         {
           title: "Introducción a la creación multimedia",
-          url: "https://www.youtube.com/watch?v=gV8I3y1cYtA",
-          duration: "09:05",
-          source: "Canal iCuadernos",
+          url: "https://youtu.be/UQjrPTrQDT8?si=vSwT6HZHEPauXBJx",
+          duration: "07:52",
+          source: "youtube",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Tecnologías del Aprendizaje",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/10_Tecnologias_del_Aprendizaje_y_la_Comunicacion.pdf",
+          url: "https://cnbguatemala.org/wiki/CNB_Ciclo_B%C3%A1sico/Tecnolog%C3%ADas_del_Aprendizaje_y_la_Comunicaci%C3%B3n",
           description:
             "Documento curricular con competencias digitales y criterios de evaluación.",
         },
         {
           title: "Guía de seguridad digital para adolescentes",
-          url: "https://www.unicef.org/guatemala/media/9831/file/Gu%C3%ADa%20de%20Seguridad%20Digital%20para%20Adolescentes.pdf",
+          url: "https://edu.mineduc.gob.gt/documents/recursos/Miniguia-seguridad-Guatemala.pdf",
           description: "Consejos prácticos sobre privacidad, redes sociales y bienestar digital.",
         },
         {
           title: "Herramientas para el aprendizaje a distancia",
-          url: "https://edu.google.com/intl/es-419/for-education/distance-learning/tips-tools/",
-          description: "Ideas y recursos de Google for Education para proyectos y colaboración en línea.",
+          url: "https://studyatgenuine.com/blog/herramientas-digitales-educativas/",
+          description: "descripcion de las herramientas digitales.",
         },
       ],
       cuestionarios: [
         {
           title: "Ciudadanía digital responsable",
-          url: "https://www.educaplay.com/recursos-educativos/13289293-seguridad_digital.html",
+          url: "https://www.educaplay.com/learning-resources/18626120-ciudadania_digital.html",
           type: "Quiz interactivo",
         },
         {
           title: "Contraseñas seguras",
-          url: "https://www.liveworksheets.com/worksheets/es/Tecnolog%C3%ADa_de_la_informaci%C3%B3n_y_comunicaci%C3%B3n/Seguridad_inform%C3%A1tica/Contrase%C3%B1as_seguras_yw1796478xg",
+          url: "https://es.scribd.com/document/481103143/BUENAS-PRACTICAS-PARA-CREAR-CONTRASENAS-GUIA-2",
           type: "Práctica guiada",
         },
         {
           title: "Proyecto multimedia",
-          url: "https://www.educaplay.com/recursos-educativos/13289305-herramientas_digitales.html",
+          url: "https://wayground.com/admin/quiz/67f7d2feefda5d231fdf4421/creacion-de-proyectos-multimedia",
           type: "Evaluación",
         },
       ],
