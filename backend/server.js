@@ -39,16 +39,44 @@ const globalLimiter = rateLimit({
 app.use(globalLimiter);
 
 // CORS
-const originEnv = (process.env.CORS_ORIGIN || "http://localhost:5173").trim();
-const originList = originEnv ? originEnv.split(",").map(s => s.trim()).filter(Boolean) : [];
+const fallbackOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:4173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+];
+
+const originEnv = (process.env.CORS_ORIGIN || "").trim();
+const originList = originEnv
+  ? originEnv.split(",").map(s => s.trim()).filter(Boolean)
+  : fallbackOrigins;
+
+const allowedLocalHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+
 const corsOptionsDelegate = (reqOrigin, cb) => {
   if (!reqOrigin) return cb(null, true);
   if (originList.includes("*") || originList.includes(reqOrigin)) return cb(null, true);
-  if (originList.length === 0 && reqOrigin.includes("localhost")) return cb(null, true);
-  const err = new Error(`CORS bloqueado: ${reqOrigin}`);
-  err.status = 403;
-  return cb(err);
+
+  let parsed;
+  try {
+    parsed = new URL(reqOrigin);
+  } catch (err) {
+    const error = new Error(`CORS bloqueado: ${reqOrigin}`);
+    error.status = 403;
+    return cb(error);
+  }
+
+  if (allowedLocalHosts.has(parsed.hostname)) {
+    return cb(null, true);
+  }
+
+  const error = new Error(`CORS bloqueado: ${reqOrigin}`);
+  error.status = 403;
+  return cb(error);
 };
+
 app.use(cors({ origin: corsOptionsDelegate, credentials: true }));
 app.options("*", cors({ origin: corsOptionsDelegate, credentials: true }));
 
