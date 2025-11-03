@@ -46,6 +46,8 @@ export const API = {
   register: `${BASE}${PREFIX}/register`,
   login:    `${BASE}${PREFIX}/login`,
   me:       `${BASE}${PREFIX}/me`,
+  forgot:   `${BASE}${PREFIX}/forgot-password`,
+  reset:    `${BASE}${PREFIX}/reset-password`,
   // Si luego agregas logout en el backend:
   // logout:   `${BASE}${PREFIX}/logout`
 }
@@ -94,6 +96,9 @@ export const api = {
   register: (payload)     => fetchJSON(API.register, { method: 'POST', body: payload }),
   login:    (email, password) => fetchJSON(API.login, { method: 'POST', body: { email, password } }),
   me:       () => fetchJSON(API.me),
+  forgotPassword: (email) => fetchJSON(API.forgot, { method: 'POST', body: { email } }),
+  resetPassword: (token, password) =>
+    fetchJSON(API.reset, { method: 'POST', body: { token, password } }),
   cursosBasico: (grado = 1, options) =>
     fetchJSON(`${BASE}${CNB_PREFIX}/basico/${grado}/cursos`, withSignalOption(options)),
   cursoContenido: (grado = 1, areaId, options) =>
