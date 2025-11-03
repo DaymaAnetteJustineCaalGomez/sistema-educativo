@@ -17,6 +17,7 @@ const inferBaseUrl = () => {
 const BASE = inferBaseUrl();
 const PREFIX = '/api/auth'
 const CNB_PREFIX = '/api/cnb'
+const ADMIN_PREFIX = '/api/admin'
 
 const TOKEN_KEY = 'sistema-educativo-token'
 
@@ -101,4 +102,21 @@ export const api = {
       withSignalOption(options),
     ),
   // logout:   () => fetchJSON(API.logout, { method:'POST' }),
+  admin: {
+    listUsers: () => fetchJSON(`${BASE}${ADMIN_PREFIX}/users`),
+    createUser: (payload) => fetchJSON(`${BASE}${ADMIN_PREFIX}/users`, { method: 'POST', body: payload }),
+    updateUser: (id, payload) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/users/${id}`, { method: 'PATCH', body: payload }),
+    rolesSummary: () => fetchJSON(`${BASE}${ADMIN_PREFIX}/roles`),
+    catalogAreas: () => fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/areas`),
+    catalogContent: (areaId, grado) =>
+      fetchJSON(
+        `${BASE}${ADMIN_PREFIX}/catalog/areas/${areaId}/contenidos?grado=${grado}`,
+      ),
+    saveCatalogContent: (areaId, grado, payload) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/areas/${areaId}/contenidos`, {
+        method: 'PUT',
+        body: { ...payload, grado },
+      }),
+  },
 }

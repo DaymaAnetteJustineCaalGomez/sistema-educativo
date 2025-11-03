@@ -1,7 +1,18 @@
 // frontend/src/dashboard/AdminDashboard.jsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import DashboardHeader from './components/DashboardHeader.jsx';
 import { getFirstName } from '../utils/user.js';
+import AdminOverview from './admin/AdminOverview.jsx';
+import AdminUsersPanel from './admin/AdminUsersPanel.jsx';
+import AdminCatalogPanel from './admin/AdminCatalogPanel.jsx';
+import AdminRolesPanel from './admin/AdminRolesPanel.jsx';
+
+const PANELS = [
+  { id: 'overview', label: 'Resumen' },
+  { id: 'users', label: 'Usuarios' },
+  { id: 'catalog', label: 'Catálogo' },
+  { id: 'roles', label: 'Roles' },
+];
 
 function formatValue(value, suffix = '') {
   if (value === null || value === undefined) return '—';
@@ -21,6 +32,7 @@ function formatPercent(value) {
 export default function AdminDashboard({ user, onLogout }) {
   const firstName = getFirstName(user);
   const report = user?.informeGlobal || user?.globalReport || {};
+  const [activePanel, setActivePanel] = useState('overview');
 
   const metrics = [
     {
@@ -70,10 +82,7 @@ export default function AdminDashboard({ user, onLogout }) {
         date: item?.fecha || item?.date || '',
       }));
     }
-    return [
-      { id: 'rec-1', title: 'Refuerzo de Matemática 2° básico', date: 'Hace 3 días' },
-      { id: 'rec-2', title: 'Proyecto de Ciencias Naturales', date: 'Hace 1 semana' },
-    ];
+    return [];
   }, [user]);
 
   const changeLog = useMemo(() => {
@@ -86,106 +95,66 @@ export default function AdminDashboard({ user, onLogout }) {
         date: item?.fecha || item?.date || '',
       }));
     }
-    return [
-      {
-        id: 'chg-1',
-        title: 'Actualización del catálogo de cursos',
-        description: 'Se agregaron nuevas áreas de programación y pensamiento lógico.',
-        date: 'Hace 2 días',
-      },
-      {
-        id: 'chg-2',
-        title: 'Gestión de roles',
-        description: 'Se asignó el rol de Docente a 4 usuarios nuevos.',
-        date: 'Hace 5 días',
-      },
-    ];
+    return [];
   }, [user]);
+
+  const handlePanelChange = (panelId) => {
+    setActivePanel(panelId);
+  };
 
   return (
     <div className="dashboard dashboard--admin">
       <DashboardHeader user={user} onLogout={onLogout} badge="Administración" />
+      <div className="dashboard-layout dashboard-layout--admin">
+        <aside className="dashboard-aside dashboard-aside--admin">
+          <section className="dashboard-hero-card dashboard-hero-card--admin">
+            <p className="dashboard-hero__eyebrow">Panel administrativo</p>
+            <h1>Hola, {firstName}</h1>
+            <p>
+              Supervisa el desempeño global, gestiona los catálogos de contenido y mantén los roles y
+              usuarios al día.
+            </p>
+            <button type="button" className="btn-primary" onClick={() => handlePanelChange('catalog')}>
+              Crear gestión
+            </button>
+          </section>
 
-      <section className="dashboard-hero dashboard-hero--admin">
-        <div>
-          <p className="dashboard-hero__eyebrow">Panel administrativo</p>
-          <h1>Hola, {firstName}</h1>
-          <p>
-            Administra usuarios, catálogos y roles, mientras supervisas el desempeño global del
-            sistema.
-          </p>
-        </div>
-        <button type="button" className="btn-primary">Crear gestión</button>
-      </section>
+          <nav className="dashboard-menu" aria-label="Secciones administrativas">
+            <h2>Menú de administración</h2>
+            <ul>
+              {PANELS.map((panel) => (
+                <li key={panel.id}>
+                  <button
+                    type="button"
+                    className={`dashboard-menu__link ${activePanel === panel.id ? 'dashboard-menu__link--active' : ''}`}
+                    onClick={() => handlePanelChange(panel.id)}
+                  >
+                    {panel.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
 
-      <section className="admin-section admin-section--management">
-        <article className="management-card">
-          <h2>Usuarios</h2>
-          <p>Gestiona altas, bajas y ediciones de estudiantes y docentes.</p>
-          <button type="button" className="btn-secondary">Administrar usuarios</button>
-        </article>
-        <article className="management-card">
-          <h2>Catálogo</h2>
-          <p>Controla las áreas disponibles, contenidos y material de apoyo.</p>
-          <button type="button" className="btn-secondary">Actualizar catálogo</button>
-        </article>
-        <article className="management-card">
-          <h2>Roles</h2>
-          <p>Define permisos y asigna responsabilidades dentro del sistema.</p>
-          <button type="button" className="btn-secondary">Configurar roles</button>
-        </article>
-      </section>
+        <main className="dashboard-main dashboard-main--admin">
+          {activePanel === 'overview' ? (
+            <AdminOverview
+              metrics={metrics}
+              sessions={sessions}
+              recommendationHistory={recommendationHistory}
+              changeLog={changeLog}
+              onManageUsers={() => handlePanelChange('users')}
+              onManageCatalog={() => handlePanelChange('catalog')}
+              onManageRoles={() => handlePanelChange('roles')}
+            />
+          ) : null}
 
-      <section className="admin-section admin-section--metrics">
-        {metrics.map((metric) => (
-          <article className="metric-card" key={metric.label}>
-            <div className="metric-card__label">{metric.label}</div>
-            <div className="metric-card__value">{metric.value}</div>
-            <p className="metric-card__hint">{metric.hint}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="admin-section admin-section--sessions">
-        <h2>Tiempo de uso por sesiones</h2>
-        <p>Consulta la frecuencia con la que se utiliza la plataforma.</p>
-        <ul>
-          {sessions.map((session) => (
-            <li key={session.id}>
-              <span>{session.label}</span>
-              <strong>{session.value}</strong>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="admin-section admin-section--history">
-        <div className="admin-history">
-          <h2>Historial de recomendaciones</h2>
-          <ul>
-            {recommendationHistory.map((item) => (
-              <li key={item.id}>
-                <span>{item.title}</span>
-                <time>{item.date}</time>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="admin-history">
-          <h2>Historial de cambios</h2>
-          <ul>
-            {changeLog.map((item) => (
-              <li key={item.id}>
-                <div>
-                  <span className="admin-history__title">{item.title}</span>
-                  <p>{item.description}</p>
-                </div>
-                <time>{item.date}</time>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+          {activePanel === 'users' ? <AdminUsersPanel active /> : null}
+          {activePanel === 'catalog' ? <AdminCatalogPanel active /> : null}
+          {activePanel === 'roles' ? <AdminRolesPanel active /> : null}
+        </main>
+      </div>
     </div>
   );
 }
