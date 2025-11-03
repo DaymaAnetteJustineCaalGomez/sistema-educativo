@@ -1661,7 +1661,7 @@ const materializeReferences = (areaData) => {
   return {
     ...base,
     recursos: base.resources,
-    temas,
+    temas: topics,
   };
 };
 
