@@ -101,6 +101,195 @@ const sanitizeTopics = (items = []) => {
   return items.map((item) => sanitizeTopic(item)).filter(Boolean);
 };
 
+const resolveArea = async (areaId) => {
+  if (!areaId) return null;
+  let area = null;
+  if (mongoose.Types.ObjectId.isValid(areaId)) {
+    area = await CNBArea.findById(areaId).lean();
+  }
+  if (!area) {
+    area = await CNBArea.findOne({ slug: areaId }).lean();
+  }
+  return area;
+};
+
+const extractIndicatorIdsFromResource = (resource) => {
+  const ids = [];
+  if (resource?.indicadorId) {
+    ids.push(resource.indicadorId.toString());
+  }
+  if (Array.isArray(resource?.indicadorIds)) {
+    for (const id of resource.indicadorIds) {
+      if (!id) continue;
+      try {
+        ids.push(new mongoose.Types.ObjectId(id).toString());
+      } catch {
+        ids.push(String(id));
+      }
+    }
+  }
+  return Array.from(new Set(ids));
+};
+
+const sanitizeBoolean = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "sí", "si", "yes"].includes(normalized)) return true;
+  if (["false", "0", "no"].includes(normalized)) return false;
+  return undefined;
+};
+
+const parseDurationToMinutes = (value) => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  const text = sanitizeString(value);
+  if (!text) return undefined;
+
+  if (/^\d+:\d+$/.test(text)) {
+    const [minutes, seconds] = text.split(":").map((n) => Number(n));
+    if (Number.isFinite(minutes)) {
+      const secs = Number.isFinite(seconds) ? seconds : 0;
+      return Math.max(0, Math.round(minutes + secs / 60));
+    }
+  }
+
+  const lower = text.toLowerCase();
+  let totalMinutes = 0;
+  const hoursMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*h/);
+  if (hoursMatch) {
+    totalMinutes += parseFloat(hoursMatch[1].replace(",", ".")) * 60;
+  }
+  const minutesMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*m/);
+  if (minutesMatch) {
+    totalMinutes += parseFloat(minutesMatch[1].replace(",", "."));
+  }
+  const secondsMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*s/);
+  if (secondsMatch) {
+    totalMinutes += parseFloat(secondsMatch[1].replace(",", ".")) / 60;
+  }
+
+  if (totalMinutes > 0) {
+    return Math.round(totalMinutes);
+  }
+
+  const numeric = Number(text.replace(",", "."));
+  if (Number.isFinite(numeric)) {
+    return Math.max(0, Math.round(numeric));
+  }
+
+  return undefined;
+};
+
+const parseOrderValue = (value) => {
+  if (value === null || value === undefined || value === "") return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
+const sanitizeResourceDocument = (payload = {}, allowedIndicatorIds = new Set()) => {
+  const tipo = sanitizeString(payload.tipo) || "recurso";
+  const titulo = sanitizeString(payload.titulo);
+  const url = sanitizeString(payload.url);
+  if (!titulo || !url) return null;
+
+  const descripcion = sanitizeString(payload.descripcion);
+  const proveedor = sanitizeString(payload.proveedor);
+  const duracionTexto = sanitizeString(payload.duracion || payload.duracionTexto);
+  const indicadorRaw = Array.isArray(payload.indicadorIds)
+    ? payload.indicadorIds
+    : Array.isArray(payload.indicadores)
+      ? payload.indicadores
+      : payload.indicadorId
+        ? [payload.indicadorId]
+        : [];
+
+  const indicatorIds = indicadorRaw
+    .map((id) => {
+      try {
+        const objectId = new mongoose.Types.ObjectId(String(id));
+        if (allowedIndicatorIds.size && !allowedIndicatorIds.has(objectId.toString())) {
+          return null;
+        }
+        return objectId;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+
+  if (allowedIndicatorIds.size && !indicatorIds.length) {
+    return null;
+  }
+
+  const doc = {
+    tipo,
+    titulo,
+    url,
+  };
+
+  if (descripcion) doc.descripcion = descripcion;
+  if (proveedor) doc.proveedor = proveedor;
+  if (duracionTexto) doc.duracionTexto = duracionTexto;
+
+  const durationMinutes = parseDurationToMinutes(duracionTexto ?? payload.duracionMin);
+  if (durationMinutes !== undefined) {
+    doc.duracionMin = durationMinutes;
+  }
+
+  if (indicatorIds.length === 1) {
+    doc.indicadorId = indicatorIds[0];
+  }
+  if (indicatorIds.length) {
+    doc.indicadorIds = indicatorIds;
+  }
+
+  const activo = sanitizeBoolean(payload.activo);
+  if (typeof activo === "boolean") {
+    doc.activo = activo;
+  }
+
+  return { doc, indicatorIds };
+};
+
+const mapResourceWithIndicators = (resource, indicatorsMap) => {
+  const indicatorIds = extractIndicatorIdsFromResource(resource);
+  const indicadores = indicatorIds.map((id) => {
+    const indicator = indicatorsMap.get(id) || {};
+    return {
+      id,
+      codigo: indicator.codigo || "",
+      descripcion: indicator.descripcion || "",
+    };
+  });
+
+  const durationString =
+    resource?.duracionTexto ||
+    (resource?.duracionMin && Number(resource.duracionMin) > 0
+      ? `${resource.duracionMin} min`
+      : "");
+
+  return {
+    id: resource?._id?.toString?.(),
+    tipo: resource?.tipo || "recurso",
+    titulo: resource?.titulo || "",
+    descripcion: resource?.descripcion || "",
+    proveedor: resource?.proveedor || "",
+    url: resource?.url || "",
+    duracion: durationString,
+    duracionTexto: resource?.duracionTexto || "",
+    duracionMin: resource?.duracionMin || 0,
+    indicadorIds,
+    indicadores,
+    activo: resource?.activo !== false,
+    createdAt: resource?.createdAt,
+    updatedAt: resource?.updatedAt,
+  };
+};
+
 router.use(authRequired, allowRoles("ADMIN"));
 
 // ---------------- Usuarios ----------------
@@ -255,7 +444,10 @@ const mapResourceFromDb = (resource) => ({
   title: resource.titulo,
   url: resource.url,
   description: resource.descripcion || resource.proveedor || "",
-  duration: resource.duracionMin ? `${resource.duracionMin} min` : "",
+  duration:
+    resource.duracionTexto ||
+    (resource.duracionMin && Number(resource.duracionMin) > 0 ? `${resource.duracionMin} min` : ""),
+  duracionTexto: resource.duracionTexto || "",
   tipo: resource.tipo,
   proveedor: resource.proveedor || "",
 });
@@ -283,13 +475,7 @@ router.get("/catalog/areas/:areaId/contenidos", async (req, res, next) => {
       return res.status(400).json({ error: "Grado inválido. Use 1, 2 o 3." });
     }
 
-    let area = null;
-    if (mongoose.Types.ObjectId.isValid(areaId)) {
-      area = await CNBArea.findById(areaId).lean();
-    }
-    if (!area) {
-      area = await CNBArea.findOne({ slug: areaId }).lean();
-    }
+    const area = await resolveArea(areaId);
     if (!area) return res.status(404).json({ error: "Área no encontrada" });
 
     const [competencias, indicadores, contenido] = await Promise.all([
@@ -340,13 +526,7 @@ router.put("/catalog/areas/:areaId/contenidos", async (req, res, next) => {
       return res.status(400).json({ error: "Grado inválido. Use 1, 2 o 3." });
     }
 
-    let area = null;
-    if (mongoose.Types.ObjectId.isValid(areaId)) {
-      area = await CNBArea.findById(areaId);
-    }
-    if (!area) {
-      area = await CNBArea.findOne({ slug: areaId });
-    }
+    const area = await resolveArea(areaId);
     if (!area) return res.status(404).json({ error: "Área no encontrada" });
 
     const payload = {
@@ -372,6 +552,241 @@ router.put("/catalog/areas/:areaId/contenidos", async (req, res, next) => {
     );
 
     res.json({ contenido: doc });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------- Competencias ----------------
+router.get("/catalog/areas/:areaId/competencias", async (req, res, next) => {
+  try {
+    const { areaId } = req.params;
+    const gradoCode = gradoToCode(req.query?.grado);
+    if (!gradoCode) {
+      return res.status(400).json({ error: "Grado inválido. Use 1, 2 o 3." });
+    }
+
+    const area = await resolveArea(areaId);
+    if (!area) return res.status(404).json({ error: "Área no encontrada" });
+
+    const competencias = await CNBCompetencia.find({ areaId: area._id, grado: gradoCode })
+      .sort({ orden: 1, createdAt: 1 })
+      .lean();
+
+    res.json({ competencias });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/catalog/areas/:areaId/competencias", async (req, res, next) => {
+  try {
+    const { areaId } = req.params;
+    const gradoCode = gradoToCode(req.body?.grado ?? req.query?.grado);
+    if (!gradoCode) {
+      return res.status(400).json({ error: "Grado inválido. Use 1, 2 o 3." });
+    }
+
+    const area = await resolveArea(areaId);
+    if (!area) return res.status(404).json({ error: "Área no encontrada" });
+
+    const codigo = sanitizeString(req.body?.codigo);
+    const enunciado = sanitizeString(req.body?.enunciado);
+    if (!codigo || !enunciado) {
+      return res.status(400).json({ error: "Código y enunciado son obligatorios" });
+    }
+
+    const competencia = new CNBCompetencia({
+      areaId: area._id,
+      grado: gradoCode,
+      codigo,
+      enunciado,
+    });
+
+    const orden = parseOrderValue(req.body?.orden);
+    if (orden !== undefined) {
+      competencia.orden = orden;
+    }
+
+    await competencia.save();
+
+    res.status(201).json({ competencia });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/catalog/competencias/:competenciaId", async (req, res, next) => {
+  try {
+    const { competenciaId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(competenciaId)) {
+      return res.status(404).json({ error: "Competencia no encontrada" });
+    }
+
+    const updates = {};
+    const codigo = sanitizeString(req.body?.codigo);
+    if (codigo) updates.codigo = codigo;
+    const enunciado = sanitizeString(req.body?.enunciado);
+    if (enunciado) updates.enunciado = enunciado;
+    const orden = parseOrderValue(req.body?.orden);
+    if (orden !== undefined) updates.orden = orden;
+    const grado = gradoToCode(req.body?.grado);
+    if (grado) updates.grado = grado;
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: "No se proporcionaron cambios" });
+    }
+
+    const competencia = await CNBCompetencia.findByIdAndUpdate(
+      competenciaId,
+      { $set: updates },
+      { new: true },
+    );
+
+    if (!competencia) {
+      return res.status(404).json({ error: "Competencia no encontrada" });
+    }
+
+    res.json({ competencia });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/catalog/competencias/:competenciaId", async (req, res, next) => {
+  try {
+    const { competenciaId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(competenciaId)) {
+      return res.status(404).json({ error: "Competencia no encontrada" });
+    }
+
+    const deleted = await CNBCompetencia.findByIdAndDelete(competenciaId);
+    if (!deleted) {
+      return res.status(404).json({ error: "Competencia no encontrada" });
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------- Recursos ----------------
+router.get("/catalog/areas/:areaId/recursos", async (req, res, next) => {
+  try {
+    const { areaId } = req.params;
+    const gradoCode = gradoToCode(req.query?.grado);
+    if (!gradoCode) {
+      return res.status(400).json({ error: "Grado inválido. Use 1, 2 o 3." });
+    }
+
+    const area = await resolveArea(areaId);
+    if (!area) return res.status(404).json({ error: "Área no encontrada" });
+
+    const indicadores = await CNBIndicador.find({ areaId: area._id, grado: gradoCode })
+      .sort({ orden: 1 })
+      .lean();
+
+    const indicatorIds = indicadores.map((item) => item._id);
+    let recursos = [];
+    if (indicatorIds.length) {
+      recursos = await Recurso.find({
+        $or: [
+          { indicadorId: { $in: indicatorIds } },
+          { indicadorIds: { $elemMatch: { $in: indicatorIds } } },
+        ],
+      })
+        .sort({ updatedAt: -1 })
+        .lean();
+    }
+
+    const indicatorMap = new Map(indicadores.map((item) => [item._id.toString(), item]));
+    const recursosFormateados = recursos.map((resource) => mapResourceWithIndicators(resource, indicatorMap));
+
+    res.json({ recursos: recursosFormateados, indicadores });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/catalog/areas/:areaId/recursos", async (req, res, next) => {
+  try {
+    const { areaId } = req.params;
+    const gradoCode = gradoToCode(req.body?.grado ?? req.query?.grado);
+    if (!gradoCode) {
+      return res.status(400).json({ error: "Grado inválido. Use 1, 2 o 3." });
+    }
+
+    const area = await resolveArea(areaId);
+    if (!area) return res.status(404).json({ error: "Área no encontrada" });
+
+    const indicadores = await CNBIndicador.find({ areaId: area._id, grado: gradoCode }).lean();
+    const indicatorMap = new Map(indicadores.map((item) => [item._id.toString(), item]));
+    const allowedIndicatorIds = new Set(indicatorMap.keys());
+
+    const sanitized = sanitizeResourceDocument(req.body, allowedIndicatorIds);
+    if (!sanitized) {
+      return res.status(400).json({ error: "Datos inválidos para el recurso" });
+    }
+
+    const recurso = new Recurso({ ...sanitized.doc, activo: sanitized.doc.activo ?? true });
+    await recurso.save();
+
+    res.status(201).json({ recurso: mapResourceWithIndicators(recurso.toObject(), indicatorMap) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/catalog/recursos/:recursoId", async (req, res, next) => {
+  try {
+    const { recursoId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(recursoId)) {
+      return res.status(404).json({ error: "Recurso no encontrado" });
+    }
+
+    const areaParam = req.body?.areaId ?? req.query?.areaId;
+    const gradoCode = gradoToCode(req.body?.grado ?? req.query?.grado);
+    if (!areaParam || !gradoCode) {
+      return res.status(400).json({ error: "Área y grado son obligatorios" });
+    }
+
+    const area = await resolveArea(areaParam);
+    if (!area) return res.status(404).json({ error: "Área no encontrada" });
+
+    const indicadores = await CNBIndicador.find({ areaId: area._id, grado: gradoCode }).lean();
+    const indicatorMap = new Map(indicadores.map((item) => [item._id.toString(), item]));
+    const allowedIndicatorIds = new Set(indicatorMap.keys());
+
+    const sanitized = sanitizeResourceDocument(req.body, allowedIndicatorIds);
+    if (!sanitized) {
+      return res.status(400).json({ error: "Datos inválidos para el recurso" });
+    }
+
+    const recurso = await Recurso.findByIdAndUpdate(recursoId, { $set: sanitized.doc }, { new: true });
+    if (!recurso) {
+      return res.status(404).json({ error: "Recurso no encontrado" });
+    }
+
+    res.json({ recurso: mapResourceWithIndicators(recurso.toObject(), indicatorMap) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/catalog/recursos/:recursoId", async (req, res, next) => {
+  try {
+    const { recursoId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(recursoId)) {
+      return res.status(404).json({ error: "Recurso no encontrado" });
+    }
+
+    const deleted = await Recurso.findByIdAndDelete(recursoId);
+    if (!deleted) {
+      return res.status(404).json({ error: "Recurso no encontrado" });
+    }
+
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

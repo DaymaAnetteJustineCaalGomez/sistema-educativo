@@ -118,5 +118,37 @@ export const api = {
         method: 'PUT',
         body: { ...payload, grado },
       }),
+    catalogCompetencias: (areaId, grado) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/areas/${areaId}/competencias?grado=${grado}`),
+    createCompetencia: (areaId, grado, payload) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/areas/${areaId}/competencias`, {
+        method: 'POST',
+        body: { ...payload, grado },
+      }),
+    updateCompetencia: (competenciaId, payload) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/competencias/${competenciaId}`, {
+        method: 'PATCH',
+        body: payload,
+      }),
+    deleteCompetencia: (competenciaId) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/competencias/${competenciaId}`, {
+        method: 'DELETE',
+      }),
+    catalogResources: (areaId, grado) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/areas/${areaId}/recursos?grado=${grado}`),
+    createResource: (areaId, grado, payload) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/areas/${areaId}/recursos`, {
+        method: 'POST',
+        body: { ...payload, grado },
+      }),
+    updateResource: (resourceId, areaId, grado, payload) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/recursos/${resourceId}`, {
+        method: 'PATCH',
+        body: { ...payload, areaId, grado },
+      }),
+    deleteResource: (resourceId) =>
+      fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/recursos/${resourceId}`, {
+        method: 'DELETE',
+      }),
   },
 }

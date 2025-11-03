@@ -1,6 +1,8 @@
 // frontend/src/dashboard/admin/AdminCatalogPanel.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api.js';
+import AdminCompetenciasManager from './AdminCompetenciasManager.jsx';
+import AdminResourcesManager from './AdminResourcesManager.jsx';
 
 const emptyBucket = () => ({
   videos: [],
@@ -14,7 +16,7 @@ const mapResourceForForm = (resource, tipo) => ({
   titulo: resource?.titulo || resource?.title || '',
   url: resource?.url || '',
   descripcion: resource?.descripcion || resource?.description || '',
-  duracion: resource?.duracion || resource?.duration || '',
+  duracion: resource?.duracionTexto || resource?.duracion || resource?.duration || '',
   proveedor: resource?.proveedor || resource?.provider || '',
   tipo: tipo || resource?.tipo || '',
 });
@@ -81,6 +83,7 @@ export default function AdminCatalogPanel({ active }) {
   const [status, setStatus] = useState('');
   const [draft, setDraft] = useState(normalizeDraft(null));
   const [baseInfo, setBaseInfo] = useState({ area: null, competencias: [], indicadores: [], recursos: emptyBucket() });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!active) return;
@@ -134,7 +137,11 @@ export default function AdminCatalogPanel({ active }) {
     return () => {
       cancelled = true;
     };
-  }, [active, selectedArea, selectedGrade]);
+  }, [active, selectedArea, selectedGrade, refreshKey]);
+
+  const triggerReload = useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
 
   const handleBucketChange = (bucketKey, index, field, value) => {
     setDraft((prev) => {
@@ -312,6 +319,7 @@ export default function AdminCatalogPanel({ active }) {
       };
       await api.admin.saveCatalogContent(selectedArea, selectedGrade, payload);
       setStatus('Catálogo actualizado correctamente.');
+      triggerReload();
     } catch (err) {
       setError(err.message || 'No se pudo guardar el catálogo.');
     } finally {
@@ -638,6 +646,21 @@ export default function AdminCatalogPanel({ active }) {
               ))}
             </div>
           </section>
+
+          <AdminCompetenciasManager
+            active={active}
+            areaId={selectedArea}
+            grado={selectedGrade}
+            onReload={triggerReload}
+          />
+
+          <AdminResourcesManager
+            active={active}
+            areaId={selectedArea}
+            grado={selectedGrade}
+            indicadorOptions={indicadorOptions}
+            onReload={triggerReload}
+          />
         </>
       )}
     </div>

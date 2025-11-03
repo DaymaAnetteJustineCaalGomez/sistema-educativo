@@ -155,7 +155,9 @@ const mapResourceFromDb = (resource) => ({
   description:
     resource?.descripcion || resource?.description || resource?.proveedor || resource?.source || "",
   duration:
-    resource?.duracion || resource?.duration ||
+    resource?.duracion ||
+    resource?.duracionTexto ||
+    resource?.duration ||
     (resource?.duracionMin ? `${resource.duracionMin} min` : resource?.length || ""),
   proveedor: resource?.proveedor || resource?.provider || "",
   tipo: resource?.tipo || resource?.type || "",
