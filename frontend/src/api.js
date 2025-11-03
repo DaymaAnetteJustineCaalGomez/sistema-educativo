@@ -5,6 +5,13 @@ const inferBaseUrl = () => {
 
   if (typeof window !== 'undefined') {
     const { protocol, hostname, port } = window.location;
+    const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+    if (localHosts.has(hostname)) {
+      if (port && port === '5002') {
+        return `${protocol}//${hostname}:5002`;
+      }
+      return `${protocol}//${hostname}:5002`;
+    }
     if (port === '5173' || port === '4173') {
       return `${protocol}//${hostname}:5002`;
     }
@@ -18,6 +25,7 @@ const BASE = inferBaseUrl();
 const PREFIX = '/api/auth'
 const CNB_PREFIX = '/api/cnb'
 const ADMIN_PREFIX = '/api/admin'
+const COMPETENCIAS_PREFIX = '/api/competencias'
 
 const TOKEN_KEY = 'sistema-educativo-token'
 
@@ -154,6 +162,17 @@ export const api = {
     deleteResource: (resourceId) =>
       fetchJSON(`${BASE}${ADMIN_PREFIX}/catalog/recursos/${resourceId}`, {
         method: 'DELETE',
+      }),
+  },
+  competencias: {
+    progreso: (areaId) => {
+      const query = areaId ? `?areaId=${encodeURIComponent(areaId)}` : ''
+      return fetchJSON(`${BASE}${COMPETENCIAS_PREFIX}/progreso${query}`)
+    },
+    actualizarProgreso: (payload) =>
+      fetchJSON(`${BASE}${COMPETENCIAS_PREFIX}/progreso`, {
+        method: 'POST',
+        body: payload,
       }),
   },
 }

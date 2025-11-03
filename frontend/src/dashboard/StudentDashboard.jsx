@@ -1,5 +1,5 @@
 // frontend/src/dashboard/StudentDashboard.jsx
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import DashboardHeader from './components/DashboardHeader.jsx';
 import { getFirstName, getGradeLabel, parseGrado } from '../utils/user.js';
 import { api } from '../api.js';
@@ -41,6 +41,34 @@ function splitSubtopics(text) {
     .map((item) => item.replace(/^[\s•-]+/, '').trim())
     .filter(Boolean)
     .map((item) => sentenceCase(item));
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  try {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('es-GT', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch (err) {
+    return '';
+  }
+}
+
+const COMPETENCIA_STATES = [
+  { value: 'pendiente', label: 'Pendiente' },
+  { value: 'en_progreso', label: 'En progreso' },
+  { value: 'dominado', label: 'Dominado' },
+];
+
+function normalizeId(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'object' && typeof value.toString === 'function') {
+    return value.toString();
+  }
+  return String(value);
 }
 
 function createActivitiesForTopic(areaName, topicTitle, firstSubtopic) {
@@ -183,7 +211,19 @@ function StudentRecommendations({ latest, history, sectionId }) {
   );
 }
 
-function CourseContentPage({ course, content, loading, error, onBack, onRetry }) {
+function CourseContentPage({
+  course,
+  content,
+  loading,
+  error,
+  onBack,
+  onRetry,
+  competenciaProgress,
+  onCompetenciaChange,
+  competenciaSavingId,
+  competenciaStatus,
+  onCompetenciaMessageDismiss,
+}) {
   if (!course) return null;
 
   const title = course?.titulo || course?.area || 'Área sin nombre';
@@ -197,6 +237,9 @@ function CourseContentPage({ course, content, loading, error, onBack, onRetry })
   const courseCuestionarios =
     content?.recursos?.cuestionarios || content?.recursos?.ejercicios || [];
   const totalRecursos = courseVideos.length + courseLecturas.length + courseCuestionarios.length;
+  const progressMap = competenciaProgress || {};
+  const status = competenciaStatus || {};
+  const isSaving = competenciaSavingId ? String(competenciaSavingId) : null;
 
   return (
     <div className="course-page">
@@ -276,14 +319,70 @@ function CourseContentPage({ course, content, loading, error, onBack, onRetry })
 
               <section id="course-competencias" className="course-page__section">
                 <h2>Competencias</h2>
+                {status?.message ? (
+                  <div className={`course-page__alert course-page__alert--${status.type || 'info'}`}>
+                    <span>{status.message}</span>
+                    {onCompetenciaMessageDismiss ? (
+                      <button
+                        type="button"
+                        className="course-page__alert-close"
+                        onClick={onCompetenciaMessageDismiss}
+                      >
+                        Cerrar
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
                 {competencias.length ? (
                   <ul className="course-page__list course-page__list--competencias">
-                    {competencias.map((item) => (
-                      <li key={item.id || item.codigo || item.enunciado}>
-                        {item.codigo ? <strong>{item.codigo}</strong> : null}
-                        <span>{item.enunciado}</span>
-                      </li>
-                    ))}
+                    {competencias.map((item, index) => {
+                      const compKey = normalizeId(item?.id ?? item?._id ?? item?.codigo, String(index));
+                      const selectId = `competencia-${compKey.replace(/[^a-z0-9_-]/gi, '').toLowerCase() || index}`;
+                      const progress = progressMap[compKey] || {};
+                      const currentState = COMPETENCIA_STATES.some((state) => state.value === progress?.estado)
+                        ? progress.estado
+                        : 'pendiente';
+                      const stateLabel =
+                        COMPETENCIA_STATES.find((state) => state.value === currentState)?.label || 'Pendiente';
+                      const updatedAtLabel = formatDateTime(progress?.actualizadoEn);
+                      const saving = isSaving === compKey;
+
+                      return (
+                        <li key={compKey} className="course-competencia">
+                          {item.codigo ? <strong>{item.codigo}</strong> : null}
+                          <span>{item.enunciado}</span>
+                          <div className="course-competencia__status">
+                            <span className={`course-competencia__badge course-competencia__badge--${currentState}`}>
+                              {stateLabel}
+                            </span>
+                            {updatedAtLabel ? (
+                              <span className="course-competencia__updated">Actualizado {updatedAtLabel}</span>
+                            ) : null}
+                          </div>
+                          <div className="course-competencia__controls">
+                            <label className="course-competencia__label" htmlFor={selectId}>
+                              Define tu avance:
+                            </label>
+                            <select
+                              id={selectId}
+                              className="course-competencia__select"
+                              value={currentState}
+                              disabled={!onCompetenciaChange || saving}
+                              onChange={(event) => onCompetenciaChange?.(compKey, event.target.value)}
+                            >
+                              {COMPETENCIA_STATES.map((state) => (
+                                <option key={state.value} value={state.value}>
+                                  {state.label}
+                                </option>
+                              ))}
+                            </select>
+                            <span className="course-competencia__hint">
+                              {saving ? 'Guardando...' : 'Se guarda automáticamente'}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="student-empty">Aún no hay competencias registradas para este grado.</p>
@@ -682,6 +781,18 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
 
   const handleRefresh = () => onRefresh?.(grado);
 
+  const [competenciaProgress, setCompetenciaProgress] = useState({});
+  const [savingCompetenciaId, setSavingCompetenciaId] = useState(null);
+  const [competenciaStatus, setCompetenciaStatus] = useState({ type: '', message: '' });
+
+  useEffect(() => {
+    if (competenciaStatus?.type === 'success' && competenciaStatus?.message) {
+      const timeout = setTimeout(() => setCompetenciaStatus({ type: '', message: '' }), 4000);
+      return () => clearTimeout(timeout);
+    }
+    return undefined;
+  }, [competenciaStatus]);
+
   const [activeCourse, setActiveCourse] = useState(null);
   const [courseContent, setCourseContent] = useState(null);
   const [courseContentLoading, setCourseContentLoading] = useState(false);
@@ -698,6 +809,9 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
       setCourseContentError('');
       setCourseContentLoading(true);
       setLoadingCourseId(courseId || null);
+      setCompetenciaProgress({});
+      setSavingCompetenciaId(null);
+      setCompetenciaStatus({ type: '', message: '' });
 
       const areaId = course?._id || course?.slug;
       if (!areaId) {
@@ -708,10 +822,23 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
       }
 
       try {
-        const payload = await api.cursoContenido(grado, areaId);
+        const [contentResult, progressResult] = await Promise.allSettled([
+          api.cursoContenido(grado, areaId),
+          api.competencias.progreso(areaId),
+        ]);
+
+        if (contentResult.status === 'rejected') {
+          throw contentResult.reason;
+        }
+
+        const payload = contentResult.value;
         const safeCompetencias = Array.isArray(payload?.competencias)
           ? payload.competencias
           : [];
+        const normalizedCompetencias = safeCompetencias.map((item, index) => ({
+          ...item,
+          id: normalizeId(item?.id ?? item?._id ?? item?.codigo, `${normalizeId(areaId)}-${index}`),
+        }));
         const safeRecursos = payload?.recursos || {};
         const courseName = course?.titulo || course?.area;
         const recursos = {
@@ -724,7 +851,7 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
         const providedTopics = Array.isArray(payload?.temas) ? payload.temas : [];
         const baseTopics = providedTopics.length
           ? providedTopics
-          : createTopicsFromCompetencias({ areaName: courseName, competencias: safeCompetencias, resources: recursos });
+          : createTopicsFromCompetencias({ areaName: courseName, competencias: normalizedCompetencias, resources: recursos });
 
         const normalizedTopics = baseTopics.map((topic, index) => {
           const subtitulos = Array.isArray(topic?.subtitulos) ? topic.subtitulos : [];
@@ -771,12 +898,33 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
             payload?.descripcion ||
             course?.descripcion ||
             `Recursos disponibles para ${courseName}.`,
-          competencias: safeCompetencias,
+          competencias: normalizedCompetencias,
           recursos,
           temas: normalizedTopics,
           actividades: generalActivities,
           retroalimentacion: generalFeedback,
         });
+
+        const progressMap = {};
+        if (progressResult.status === 'fulfilled') {
+          const list = Array.isArray(progressResult.value?.progreso)
+            ? progressResult.value.progreso
+            : [];
+          list.forEach((entry) => {
+            const key = normalizeId(entry?.competenciaId || entry?.competencia?.id);
+            if (!key) return;
+            progressMap[key] = {
+              ...entry,
+              competenciaId: key,
+              actualizadoEn: entry?.actualizadoEn || entry?.updatedAt,
+            };
+          });
+        } else if (progressResult.status === 'rejected') {
+          const msg = progressResult.reason?.message || 'No se pudo cargar tu avance de competencias.';
+          setCompetenciaStatus({ type: 'error', message: msg });
+        }
+
+        setCompetenciaProgress(progressMap);
       } catch (err) {
         setCourseContentError(err.message || 'No se pudieron cargar los contenidos.');
       } finally {
@@ -802,6 +950,45 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
     }
   }, [activeCourse, handleLoadContent]);
 
+  const handleCompetenciaUpdate = useCallback(
+    async (competenciaId, nextState) => {
+      if (!competenciaId) return;
+      setSavingCompetenciaId(competenciaId);
+      setCompetenciaStatus({ type: '', message: '' });
+      try {
+        const response = await api.competencias.actualizarProgreso({
+          competenciaId,
+          estado: nextState,
+        });
+        if (!response?.progreso) {
+          throw new Error('No se pudo guardar el avance.');
+        }
+        const entry = response.progreso;
+        const key = normalizeId(entry?.competenciaId || competenciaId);
+        setCompetenciaProgress((prev) => ({
+          ...prev,
+          [key]: {
+            ...entry,
+            competenciaId: key,
+            actualizadoEn: entry?.actualizadoEn || entry?.updatedAt || new Date().toISOString(),
+          },
+        }));
+        setCompetenciaStatus({
+          type: 'success',
+          message: 'Tu avance en la competencia se guardó correctamente.',
+        });
+      } catch (err) {
+        setCompetenciaStatus({
+          type: 'error',
+          message: err.message || 'No se pudo guardar tu avance de competencia.',
+        });
+      } finally {
+        setSavingCompetenciaId(null);
+      }
+    },
+    [],
+  );
+
   if (viewMode === 'course' && activeCourse) {
     return (
       <div className="dashboard dashboard--student">
@@ -813,6 +1000,11 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
           error={courseContentError}
           onBack={handleBackToDashboard}
           onRetry={handleRetryContent}
+          competenciaProgress={competenciaProgress}
+          onCompetenciaChange={handleCompetenciaUpdate}
+          competenciaSavingId={savingCompetenciaId}
+          competenciaStatus={competenciaStatus}
+          onCompetenciaMessageDismiss={() => setCompetenciaStatus({ type: '', message: '' })}
         />
       </div>
     );
