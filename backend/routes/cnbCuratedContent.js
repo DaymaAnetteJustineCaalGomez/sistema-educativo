@@ -16,62 +16,62 @@ const normalizeKey = (value = "") =>
 const CURATED_DATA = {
   "lengua-espanol": {
     aliases: ["Comunicación y Lenguaje Idioma Español"],
-    sourceUrl: "https://www.mineduc.gob.gt/portal/contenido/cnb/basico",
+    sourceUrl: "https://cnbguatemala.org/wiki/CNB_Ciclo_B%C3%A1sico/Comunicaci%C3%B3n_y_Lenguaje_Idioma_Espa%C3%B1ol",
     descripcion:
       "Recursos y actividades para fortalecer la comprensión lectora, la producción escrita y la ortografía según el CNB.",
     resources: {
       videos: [
         {
-          title: "Comprensión lectora: la idea principal",
-          url: "https://www.youtube.com/watch?v=G5R16vuMJp0",
-          duration: "07:13",
-          source: "Khan Academy Español",
+          title: "Cómo identificar el TEMA CENTRAL, IDEA PRINCIPAL Y SECUNDARIAS de un texto",
+          url: "https://youtu.be/_g7Wjnm4PEE?si=jcX2AdOC5xsSYx-X",
+          duration: "03:28",
+          source: "Profe Paolo Astorga",
         },
         {
-          title: "Cómo escribir un texto argumentativo",
-          url: "https://www.youtube.com/watch?v=7uqQIsz8eqE",
-          duration: "09:45",
-          source: "Profe Andrea Lengua",
+          title: "Cómo redactar un TEXTO ARGUMENTATIVO de manera fácil ",
+          url: "https://youtu.be/IS3yTxP6EEk?si=x0r99slg3zA-I8k4",
+          duration: "05:26",
+          source: "Profe Paolo Astorga",
         },
         {
           title: "Signos de puntuación: uso correcto",
-          url: "https://www.youtube.com/watch?v=fvX2VNfzO_w",
-          duration: "06:28",
-          source: "Educatina",
+          url: "https://youtu.be/2Bs6tknaLJQ?si=lT43d4ZkVqPjUded",
+          duration: "06:27",
+          source: "Clases particulares en avila",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Comunicación y Lenguaje",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/01_Comunicacion_y_Lenguaje_Idioma_Espanol.pdf",
+          url: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Comunicacion-y-Lenguaje-IDIOMA-ESPANOL-Ciclo-Basico-2-1.pdf",
           description:
             "Documento oficial del Currículo Nacional Base para el área de Comunicación y Lenguaje en ciclo básico.",
         },
         {
           title: "Estrategias de comprensión lectora",
-          url: "https://www.grefi.org/uploads/1/3/8/3/13830217/estrategias_compresion_lectora.pdf",
+          url: "https://acceso.mineduc.cl/wp-content/uploads/2021/06/Cuadernillo-Comprension-Lectora-adm2021.pdf",
           description: "Guía descargable con técnicas para desarrollar la comprensión lectora.",
         },
         {
           title: "Guía para producir textos argumentativos",
-          url: "https://aulaplaneta.santillana.es/wp-content/uploads/2016/05/Guia-didactica-texto-argumentativo.pdf",
+          url: "https://leo.uniandes.edu.co/guia-para-la-elaboracion-de-textos-argumentativos/",
           description: "Orientaciones y ejemplos para planificar y redactar argumentos sólidos.",
         },
       ],
       cuestionarios: [
         {
           title: "Comprensión lectora de textos narrativos",
-          url: "https://es.liveworksheets.com/worksheets/es/Lengua_española/Comprensión_lectora/Comprensión_lectora_Narrativa_dz1507199ox",
+          url: "https://www.pedrodevaldivia-temuco.cl/wp-content/uploads/2020/04/4%C2%B0-Lenguaje-Textos-Narrativos.pdf",
           type: "Comprensión lectora",
         },
         {
           title: "Textos argumentativos: evaluación interactiva",
-          url: "https://www.educaplay.com/recursos-educativos/13288873-texto_argumentativo.html",
+          url: "https://es.educaplay.com/recursos-educativos/2375070-texto_argumentativo.html",
           type: "Evaluación",
         },
         {
           title: "Uso de signos de puntuación",
-          url: "https://www.liveworksheets.com/worksheets/es/Lengua_española/Puntuación/Signos_de_puntuación_xb934467tx",
+          url: "https://aprenderespanol.org/gramatica/ortografia-signos-puntuacion.html",
           type: "Práctica guiada",
         },
       ],
@@ -182,20 +182,20 @@ const CURATED_DATA = {
     resources: {
       videos: [
         {
-          title: "Present simple in everyday routines",
-          url: "https://www.youtube.com/watch?v=8k1I9aZZN9I",
-          duration: "08:02",
-          source: "BBC Learning English",
+          title: "Present simple",
+          url: "https://youtu.be/nvVdIJ0las0?si=Ip3-Z5IUR2Sn7a2I",
+          duration: "04:49",
+          source: "ELLI",
         },
         {
-          title: "Reading strategies for B1 students",
-          url: "https://www.youtube.com/watch?v=2eZ8K6R9G1k",
-          duration: "09:31",
-          source: "Oxford Online English",
+          title: "How to improve your reading skills",
+          url: "https://youtu.be/KLKZdMo7cLE?si=K3gm2hc4RdhdreRN",
+          duration: "01:55",
+          source: "british",
         },
         {
-          title: "Listening practice: understanding announcements",
-          url: "https://www.youtube.com/watch?v=7wftjng9W98",
+          title: "Understand FAST English",
+          url: "https://youtu.be/mxDA_WjsRt0?si=EihqhTvKu-7kCSPS",
           duration: "05:55",
           source: "English with Lucy",
         },
@@ -203,34 +203,34 @@ const CURATED_DATA = {
       lecturas: [
         {
           title: "School exchange · Reading",
-          url: "https://learnenglishteens.britishcouncil.org/skills/reading/b1-reading/school-exchange",
-          description: "Actividad de lectura graduada con vocabulario y ejercicios de comprensión.",
+          url: "https://sites.reading.ac.uk/t-and-l-exchange/",
+          description: "explicacion ",
         },
         {
           title: "Present simple · Grammar reference",
-          url: "https://learnenglish.britishcouncil.org/grammar/beginner-to-pre-intermediate/present-simple",
-          description: "Explicación completa con ejemplos y audios descargables.",
+          url: "https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/present-simple",
+          description: "Explicación completa con ejemplos.",
         },
         {
           title: "Listening: understanding the news",
-          url: "https://learnenglish.britishcouncil.org/skills/listening/b1-listening/understanding-the-news",
+          url: "https://breakingnewsenglish.com/",
           description: "Actividad con audio, transcript y ejercicios autocorregibles.",
         },
       ],
       cuestionarios: [
         {
           title: "Reading comprehension quiz: School exchange",
-          url: "https://learnenglishteens.britishcouncil.org/skills/reading/b1-reading/school-exchange",
+          url: "https://learnenglishteens.britishcouncil.org/skills/reading/b1-reading/foreign-exchange-emails",
           type: "Reading quiz",
         },
         {
           title: "Present simple interactive practice",
-          url: "https://agendaweb.org/exercises/verbs/present-simple-1.htm",
+          url: "https://www.gamestolearnenglish.com/present-simple/",
           type: "Grammar practice",
         },
         {
           title: "Listening quiz: travel announcements",
-          url: "https://www.liveworksheets.com/worksheets/en/English_as_a_Second_Language_(ESL)/Listening/Listening_Comprehension_-_Announcements_od1859879iy",
+          url: "https://learnenglish.britishcouncil.org/skills/listening/a2-listening/transport-announcements",
           type: "Listening comprehension",
         },
       ],
@@ -335,62 +335,62 @@ const CURATED_DATA = {
   },
   "matematica": {
     aliases: ["Matemática"],
-    sourceUrl: "https://www.mineduc.gob.gt/curriculonacionalbasico/",
+    sourceUrl: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Matematica-Ciclo-Basico-1.pdf",
     descripcion:
       "Colección de recursos para conectar el álgebra, la proporcionalidad y la geometría con situaciones reales.",
     resources: {
       videos: [
         {
           title: "Introducción a las expresiones algebraicas",
-          url: "https://www.youtube.com/watch?v=9uA4MYXwlCI",
-          duration: "10:04",
-          source: "Khan Academy Español",
+          url: "https://youtu.be/F32kPpq7YHc?si=R4qMd_cyklOhrhnF",
+          duration: "06:01",
+          source: "Prof agramonte",
         },
         {
-          title: "Razones y proporciones en la vida diaria",
-          url: "https://www.youtube.com/watch?v=FmrzCwXTlzY",
-          duration: "08:18",
-          source: "Matemáticas profe Alex",
+          title: "Razones y proporciones",
+          url: "https://youtu.be/3eYwW4sDlxM?si=JCCIr1s-hjYkv2al",
+          duration: "04:56",
+          source: "Daniel carreon",
         },
         {
           title: "Teorema de Pitágoras explicado",
-          url: "https://www.youtube.com/watch?v=umdr4nKCbGg",
-          duration: "07:05",
-          source: "Innova Academy",
+          url: "https://youtu.be/eTEBvBIz8Ok?si=O3K8gXnK73DNb__7",
+          duration: "08:50",
+          source: "Daniel carreon",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Matemática",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/02_Matematica.pdf",
+          url: "https://cnbguatemala.org/wiki/Bachillerato_en_Ciencias_y_Letras_con_Orientaci%C3%B3n_en_Computaci%C3%B3n/%C3%81rea_de_Matem%C3%A1ticas",
           description:
             "Competencias y contenidos oficiales del área de Matemática para ciclo básico.",
         },
         {
           title: "Expresiones algebraicas: guía práctica",
-          url: "https://es.khanacademy.org/math/algebra/introduction-to-algebra/algebraic-expressions/a/introduction-to-expressions",
-          description: "Explicación paso a paso con ejemplos interactivos de Khan Academy.",
+          url: "https://es.scribd.com/document/524866739/1-GA-Expresiones-Algebraicas",
+          description: "Explicación paso a paso.",
         },
         {
           title: "Aplicaciones del teorema de Pitágoras",
-          url: "https://www.geogebra.org/m/pJJ9uXJm",
-          description: "Libro interactivo con demostraciones y ejercicios dinámicos en GeoGebra.",
+          url: "https://www.superprof.es/apuntes/escolar/matematicas/geometria/basica/teorema-de-pitagoras.html",
+          description: "pagina interactiva con demostraciones y ejercicios dinámicos en GeoGebra.",
         },
       ],
       cuestionarios: [
         {
           title: "Práctica de expresiones algebraicas",
-          url: "https://www.khanacademy.org/math/algebra/introduction-to-algebra/algebraic-expressions/e/writing_expressions",
+          url: "https://www.matematicasonline.es/pdf/ejercicios/3_ESO/Ejercicios%20de%20expresiones%20algebraicas.pdf",
           type: "Ejercicios interactivos",
         },
         {
           title: "Razones y proporciones",
-          url: "https://www.thatquiz.org/es/classroom-activities/math/ratio/",
-          type: "Evaluación en línea",
+          url: "https://gc.scalahed.com/recursos/files/r161r/w24670w/1%20razones%20proporciones.pdf",
+          type: "Evaluación paso a paso ",
         },
         {
           title: "Teorema de Pitágoras: práctica",
-          url: "https://es.khanacademy.org/math/geometry/hs-geo-trig/hs-geo-pythagorean/e/pythagorean-theorem-1",
+          url: "https://es.khanacademy.org/math/geometry/hs-geo-trig/hs-geo-pyth-theorem/e/pythagorean-theorem-word-problems",
           type: "Problemas interactivos",
         },
       ],
@@ -502,9 +502,9 @@ const CURATED_DATA = {
       videos: [
         {
           title: "La célula: estructura y funciones",
-          url: "https://www.youtube.com/watch?v=4CzE_M9aX0o",
-          duration: "09:40",
-          source: "Happy Learning Español",
+          url: "https://youtu.be/tdY1HaWbYQY?si=7EzPPttfOZtNCEr9",
+          duration: "16:58",
+          source: "arriba la ciencia",
         },
         {
           title: "Ecosistemas y cadenas alimenticias",
@@ -522,35 +522,35 @@ const CURATED_DATA = {
       lecturas: [
         {
           title: "CNB Guatemala · Ciencias Naturales",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/03_Ciencias_Naturales.pdf",
+          url: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Ciencias-Naturales-Ciclo-Basico.pdf",
           description:
             "Referente curricular oficial con competencias, contenidos y sugerencias metodológicas.",
         },
         {
           title: "Qué es un ecosistema",
-          url: "https://www.nationalgeographicla.com/medio-ambiente/2020/05/que-es-un-ecosistema",
+          url: "https://www.biodiversidad.gob.mx/ecosistemas/quees",
           description: "Artículo con imágenes y ejemplos de ecosistemas terrestres y acuáticos.",
         },
         {
           title: "La célula para estudiantes de básicos",
-          url: "https://www.ecologiaverde.com/la-celula-1559.html",
+          url: "https://medlineplus.gov/spanish/genetica/entender/basica/celula/",
           description: "Explicación detallada de la célula con infografías y actividades propuestas.",
         },
       ],
       cuestionarios: [
         {
           title: "La célula: autoevaluación",
-          url: "https://www.liveworksheets.com/worksheets/es/Ciencias_naturales/La_célula/La_célula_bf1181176vd",
+          url: "https://www.biologia.edu.ar/cel_euca/autoevaluacion/evacel2.htm",
           type: "Evaluación",
         },
         {
           title: "Ecosistemas y biomas",
-          url: "https://www.educaplay.com/recursos-educativos/13288989-ecosistemas_y_sus_componentes.html",
-          type: "Práctica guiada",
+          url: "https://es.khanacademy.org/science/ap-college-environmental-science/x0b0e430a38ebd23f:the-living-world-ecosystems-and-biodiversity/x0b0e430a38ebd23f:ecosystems-and-biomes/e/ecosystems-and-biomes",
+          type: "Práctica",
         },
         {
           title: "La energía y sus transformaciones",
-          url: "https://quizizz.com/admin/quiz/5e78d5f0cbb1b7001b9f0d35/la-energia",
+          url: "https://wordwall.net/resource/19327486/la-energ%C3%ACa-y-sus-transformaciones",
           type: "Quiz interactivo",
         },
       ],
@@ -655,62 +655,62 @@ const CURATED_DATA = {
   },
   "ciencias-sociales": {
     aliases: ["Ciencias Sociales, Formación Ciudadana e Interculturalidad"],
-    sourceUrl: "https://cnb.mineduc.gob.gt/",
+    sourceUrl: "https://cnbguatemala.org/wiki/CNB_Ciclo_B%C3%A1sico/Ciencias_Sociales,_Formaci%C3%B3n_Ciudadana_e_Interculturalidad",
     descripcion:
       "Recursos para analizar la historia nacional, fortalecer la cultura democrática y valorar la diversidad guatemalteca.",
     resources: {
       videos: [
         {
           title: "Historia de Guatemala: de la colonia a la independencia",
-          url: "https://www.youtube.com/watch?v=0YzUKGwEu-U",
-          duration: "11:32",
-          source: "Academia Play",
+          url: "https://youtu.be/hwd-8IWV3uU?si=d53xdfRzEMrr40Ea",
+          duration: "03:56",
+          source: "Seño lis",
         },
         {
           title: "Participación ciudadana y democracia",
-          url: "https://www.youtube.com/watch?v=H35vj0IadB4",
-          duration: "07:20",
-          source: "UNAM - Cultura Cívica",
+          url: "https://youtu.be/HZmu92lM9f0?si=8YzRjRHmwGWj0xrg",
+          duration: "03:12",
+          source: "Canal encuentro",
         },
         {
           title: "Diversidad cultural en Guatemala",
-          url: "https://www.youtube.com/watch?v=1kM5uQFhH0M",
-          duration: "08:05",
-          source: "Canal FGER",
+          url: "https://youtu.be/psiqKh_uoPY?si=iNCQ9aISwsDqXcQc",
+          duration: "07:05",
+          source: "Lourdes lepe",
         },
       ],
       lecturas: [
         {
           title: "CNB Guatemala · Ciencias Sociales",
-          url: "https://www.mineduc.gob.gt/curriculonacionalbasico/documents/cnb/basico/04_Ciencias_Sociales_Formacion_Ciudadana_e_Interculturalidad.pdf",
+          url: "https://digecur.mineduc.gob.gt/wp-content/uploads/2025/01/CNB-Ciencias-Sociales-Ciclo-Basico-1.pdf",
           description:
             "Marco curricular que orienta contenidos de historia, ciudadanía e interculturalidad.",
         },
         {
           title: "Historia general de Guatemala",
-          url: "https://cnb.mineduc.gob.gt/index.php?title=Historia_de_Guatemala",
-          description: "Artículo del CNB con líneas de tiempo y recursos para el aula.",
+          url: "hatgpt.com/c/689c1149-45c0-8324-8336-55716ca88e03",
+          description: "Libro de la historia de guatemala",
         },
         {
           title: "Ciudadanía activa y derechos humanos",
-          url: "https://www.oacnudh.org/wp-content/uploads/2022/02/Guia_Derechos_Humanos_Educacion.pdf",
-          description: "Guía didáctica con actividades sobre participación ciudadana y derechos humanos.",
+          url: "https://www.coe.int/es/web/compass/citizenship-and-participation",
+          description: "manual de educacion de los derechos humanos",
         },
       ],
       cuestionarios: [
         {
           title: "Independencia de Centroamérica",
-          url: "https://www.educaplay.com/recursos-educativos/13289035-independencia_de_centroamerica.html",
+          url: "https://wordwall.net/es/resource/69583431/independencia-en-centroam%c3%a9rica",
           type: "Evaluación",
         },
         {
           title: "Derechos y deberes ciudadanos",
-          url: "https://es.liveworksheets.com/worksheets/es/Ciudadan%C3%ADa/Derechos_y_deberes/Derechos_y_deberes_ciudadanos_nj2365497hg",
-          type: "Práctica guiada",
+          url: "https://wordwall.net/es-cl/community/deberes-y-derechos-como-ciudadanos",
+          type: "juegos",
         },
         {
           title: "Diversidad cultural guatemalteca",
-          url: "https://www.educaplay.com/recursos-educativos/13289068-culturas_de_guatemala.html",
+          url: "https://wayground.com/admin/quiz/61f57028078150001d85c0fb/la-diversidad-cultural-en-guatemala",
           type: "Quiz interactivo",
         },
       ],
@@ -1661,7 +1661,7 @@ const materializeReferences = (areaData) => {
   return {
     ...base,
     recursos: base.resources,
-    temas,
+    temas: topics,
   };
 };
 

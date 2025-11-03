@@ -23,6 +23,7 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import intentosRoutes from "./routes/intentos.routes.js";
 import historialRoutes from "./routes/historial.routes.js";
 import notificacionesRoutes from "./routes/notificaciones.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -67,6 +68,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/intentos", intentosRoutes);
 app.use("/api/historial", historialRoutes);
 app.use("/api/notificaciones", notificacionesRoutes);
+app.use("/api/admin", adminRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: `No encontrado: ${req.method} ${req.originalUrl}` }));

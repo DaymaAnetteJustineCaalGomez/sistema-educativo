@@ -3,6 +3,8 @@ import { Router } from "express";
 import { authRequired } from "../middlewares/auth.middleware.js";
 import CNBArea from "../models/CNB_Area.js";
 import CNBCompetencia from "../models/CNB_Competencia.js";
+import CNBIndicador from "../models/CNB_Indicador.js";
+import CNBCourseContent from "../models/CNBCourseContent.js";
 import { getCuratedContentForArea } from "./cnbCuratedContent.js";
 
 // Si más adelante vinculas Recurso con el área, podrás contar recursos aquí
@@ -18,50 +20,13 @@ const router = Router();
 // Mapas y utilidades
 const gradoNumToCode = (n) => ({ 1: "1B", 2: "2B", 3: "3B" }[Number(n)] || null);
 
-const buildSampleResources = (areaName, sourceUrl) => {
-  const subject = areaName || "Área";
-  const baseUrl = sourceUrl || "https://aprende.mineduc.gob.gt";
-  const ejercicios = [
-    {
-      title: `Cuestionario diagnóstico de ${subject}`,
-      url: baseUrl,
-      type: "Evaluación",
-    },
-    {
-      title: `Taller interactivo de ${subject}`,
-      url: baseUrl,
-      type: "Práctica guiada",
-    },
-  ];
-  return {
-    videos: [
-      {
-        title: `${subject}: introducción guiada`,
-        url: baseUrl,
-        duration: "06:00",
-      },
-      {
-        title: `${subject}: actividades prácticas`,
-        url: baseUrl,
-        duration: "08:30",
-      },
-    ],
-    lecturas: [
-      {
-        title: `Guía de estudio de ${subject}`,
-        url: baseUrl,
-        description: "Resumen de los contenidos clave del CNB para reforzar desde casa.",
-      },
-      {
-        title: `Planificación semanal de ${subject}`,
-        url: baseUrl,
-        description: "Secuencia sugerida de sesiones y actividades evaluables.",
-      },
-    ],
-    ejercicios,
-    cuestionarios: ejercicios,
-  };
-};
+const emptyResources = () => ({
+  videos: [],
+  lecturas: [],
+  ejercicios: [],
+  cuestionarios: [],
+  otros: [],
+});
 
 const toSentence = (text) => {
   if (!text) return "";
@@ -147,14 +112,21 @@ const buildTopicsFromCompetencias = ({ areaName, competencias, resources }) => {
   }
 
   return competencias.map((comp, index) => {
-    const subtopics = splitSubtopics(comp?.enunciado);
+    const providedSubtopics = Array.isArray(comp?.subtitulos) ? comp.subtitulos : [];
+    const subtopics = providedSubtopics.length
+      ? providedSubtopics.map((item) => toSentence(item)).filter(Boolean)
+      : splitSubtopics(comp?.enunciado);
     const tituloBase = comp?.codigo ? `${comp.codigo} · ${toSentence(subtopics[0] || comp.enunciado)}` : null;
     const titulo = tituloBase || toSentence(comp?.enunciado) || `Tema ${index + 1}`;
+    const indicadorIds = Array.isArray(comp?.indicadorIds)
+      ? comp.indicadorIds.map((id) => id?.toString?.()).filter(Boolean)
+      : [];
     return {
       id: String(comp?._id || index),
       codigo: comp?.codigo || null,
       titulo,
       subtitulos: subtopics,
+      indicadorIds,
       recursos: assignResourcesToTopic(resources, index),
       actividades: buildActivitiesForTopic(areaName, titulo, subtopics[0]),
       retroalimentacion: buildFeedbackForTopic(titulo, areaName),
@@ -174,6 +146,168 @@ const buildGeneralActivities = (temas, areaName) => {
 const buildGeneralFeedback = (areaName) => {
   const subject = areaName || "el curso";
   return `Recuerda que puedes repetir los cuestionarios y revisar las lecturas cuando necesites reforzar ${subject}. Cada tema debe dominarse antes de pasar al siguiente.`;
+};
+
+const mapResourceFromDb = (resource) => ({
+  id: resource?._id ? resource._id.toString() : undefined,
+  title: resource?.titulo || resource?.title || "",
+  url: resource?.url || "",
+  description:
+    resource?.descripcion || resource?.description || resource?.proveedor || resource?.source || "",
+  duration:
+    resource?.duracion ||
+    resource?.duracionTexto ||
+    resource?.duration ||
+    (resource?.duracionMin ? `${resource.duracionMin} min` : resource?.length || ""),
+  proveedor: resource?.proveedor || resource?.provider || "",
+  tipo: resource?.tipo || resource?.type || "",
+});
+
+const groupResourcesByType = (items = []) => {
+  const result = emptyResources();
+  for (const item of items) {
+    const mapped = mapResourceFromDb(item);
+    if (!mapped.title || !mapped.url) continue;
+    const tipo = String(mapped.tipo || "").toLowerCase();
+    if (["video", "videos"].includes(tipo)) result.videos.push(mapped);
+    else if (["lectura", "articulo", "artículo", "texto"].includes(tipo)) result.lecturas.push(mapped);
+    else if (["ejercicio", "practica", "práctica"].includes(tipo)) result.ejercicios.push(mapped);
+    else if (["quiz", "cuestionario", "evaluacion", "evaluación", "evaluacion diagnostica"].includes(tipo))
+      result.cuestionarios.push(mapped);
+    else result.otros.push(mapped);
+  }
+  return result;
+};
+
+const normalizeBucket = (bucket = {}) => {
+  const result = emptyResources();
+  for (const key of Object.keys(result)) {
+    const items = Array.isArray(bucket[key]) ? bucket[key] : [];
+    result[key] = items
+      .map((item) => mapResourceFromDb(item))
+      .filter((item) => item.title && item.url);
+  }
+  return result;
+};
+
+const mergeResourceBuckets = (...buckets) => {
+  const result = emptyResources();
+  const seen = new Set();
+
+  for (const bucket of buckets) {
+    if (!bucket) continue;
+    const normalized = normalizeBucket(bucket);
+    for (const key of Object.keys(result)) {
+      for (const item of normalized[key]) {
+        const identifier = `${key}|${(item.title || "").toLowerCase()}|${item.url}`;
+        if (seen.has(identifier)) continue;
+        seen.add(identifier);
+        result[key].push(item);
+      }
+    }
+  }
+
+  return result;
+};
+
+const mapActivity = (activity) => {
+  if (!activity) return null;
+  const tipo = activity?.tipo || activity?.title || activity?.name;
+  const descripcion = activity?.descripcion || activity?.description || activity?.detalle;
+  if (!tipo || !descripcion) return null;
+  return {
+    tipo,
+    descripcion,
+  };
+};
+
+const mergeActivities = (...lists) => {
+  const result = [];
+  const seen = new Set();
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue;
+    for (const activity of list) {
+      const mapped = mapActivity(activity);
+      if (!mapped) continue;
+      const key = `${mapped.tipo.toLowerCase()}|${mapped.descripcion}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(mapped);
+    }
+  }
+  return result;
+};
+
+const buildIndicatorResourceMap = (resources = []) => {
+  const map = new Map();
+  for (const resource of resources) {
+    const mapped = mapResourceFromDb(resource);
+    if (!mapped.title || !mapped.url) continue;
+    const ids = [];
+    if (resource?.indicadorId) ids.push(String(resource.indicadorId));
+    if (Array.isArray(resource?.indicadorIds)) {
+      for (const id of resource.indicadorIds) {
+        if (!id) continue;
+        ids.push(String(id));
+      }
+    }
+    for (const id of ids) {
+      if (!map.has(id)) map.set(id, []);
+      map.get(id).push(resource);
+    }
+  }
+  return map;
+};
+
+const collectResourcesForIndicators = (resourceMap, indicadorIds = []) => {
+  if (!indicadorIds?.length) return emptyResources();
+  const docs = [];
+  for (const id of indicadorIds) {
+    const key = String(id);
+    const items = resourceMap.get(key);
+    if (items?.length) docs.push(...items);
+  }
+  return groupResourcesByType(docs);
+};
+
+const normalizeSubtopicsFromIndicator = (indicator) => {
+  const subtitles = [];
+  if (indicator?.descripcion) {
+    subtitles.push(toSentence(indicator.descripcion));
+  }
+  if (Array.isArray(indicator?.contenidos)) {
+    for (const content of indicator.contenidos) {
+      const title = content?.titulo || content?.title || content?.descripcion;
+      if (title) subtitles.push(toSentence(title));
+    }
+  }
+  return subtitles;
+};
+
+const normalizeTopicFromDoc = (topic) => {
+  if (!topic) return null;
+  const titulo = topic?.titulo || topic?.name;
+  if (!titulo) return null;
+
+  const subtitulos = Array.isArray(topic?.subtitulos)
+    ? topic.subtitulos.map((item) => toSentence(item)).filter(Boolean)
+    : [];
+
+  const indicadorIds = Array.isArray(topic?.indicadorIds)
+    ? topic.indicadorIds.map((id) => id?.toString?.()).filter(Boolean)
+    : [];
+
+  return {
+    id: topic?._id?.toString?.() || topic?.id || titulo,
+    codigo: topic?.codigo || null,
+    titulo,
+    subtitulos,
+    descripcion: topic?.descripcion || "",
+    indicadorIds,
+    recursos: normalizeBucket(topic?.recursos),
+    actividades: mergeActivities(topic?.actividades),
+    retroalimentacion: topic?.retroalimentacion || "",
+  };
 };
 const fallbackAreasBasico = [
   "Comunicación y Lenguaje Idioma Español",
@@ -300,41 +434,133 @@ router.get("/basico/:grado/cursos/:areaId/contenidos", authRequired, async (req,
 
     if (!area) return res.status(404).json({ error: "Área no encontrada" });
 
-    const competencias = await CNBCompetencia.find({
-      areaId: area?._id,
-      grado: code,
-    })
-      .sort({ orden: 1 })
-      .lean()
-      .catch(() => []);
+    const [competencias, indicadores, personalizado] = await Promise.all([
+      CNBCompetencia.find({ areaId: area?._id, grado: code }).sort({ orden: 1 }).lean(),
+      CNBIndicador.find({ areaId: area?._id, grado: code }).sort({ orden: 1 }).lean(),
+      CNBCourseContent.findOne({ areaId: area?._id, grado: code }).lean(),
+    ]);
 
-    const curated = getCuratedContentForArea(area);
-    const curatedResources = curated?.recursos || curated?.resources || null;
-    const recursos =
-      curatedResources || buildSampleResources(area.nombre, curated?.sourceUrl || area.fuente?.url);
     const competenciasNormalizadas = competencias.map((comp) => ({
+      _id: comp._id,
       id: String(comp._id),
       codigo: comp.codigo,
       enunciado: comp.enunciado,
     }));
 
-    const temas =
-      curated?.temas ||
-      buildTopicsFromCompetencias({
-        areaName: area.nombre,
-        competencias: competenciasNormalizadas,
-        resources: recursos,
-      });
+    const indicadorIds = indicadores.map((item) => item._id);
+    let recursosDocs = [];
+    if (Recurso && indicadorIds.length && !areaId?.startsWith("fallback")) {
+      try {
+        recursosDocs = await Recurso.find({
+          activo: { $ne: false },
+          $or: [
+            { indicadorId: { $in: indicadorIds } },
+            { indicadorIds: { $elemMatch: { $in: indicadorIds } } },
+          ],
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+      } catch {
+        recursosDocs = [];
+      }
+    }
+
+    const recursosPorIndicador = buildIndicatorResourceMap(recursosDocs);
+    const recursosGeneralesDb = groupResourcesByType(recursosDocs);
+
+    const curated = getCuratedContentForArea(area) || null;
+
+    const recursosGenerales = mergeResourceBuckets(
+      recursosGeneralesDb,
+      personalizado?.recursosGenerales,
+      // Solo usamos recursos del curado si tienen URL válidas
+      curated?.recursos && normalizeBucket(curated.recursos),
+    );
+
+    const temasPersonalizados = Array.isArray(personalizado?.temas)
+      ? personalizado.temas
+          .map((topic) => normalizeTopicFromDoc(topic))
+          .filter(Boolean)
+          .map((topic) => ({
+            ...topic,
+            recursos: mergeResourceBuckets(
+              topic.recursos,
+              collectResourcesForIndicators(recursosPorIndicador, topic.indicadorIds),
+            ),
+          }))
+      : [];
 
     const actividadesGenerales =
-      curated?.actividadesGenerales || buildGeneralActivities(temas, area.nombre);
+      mergeActivities(
+        personalizado?.actividadesGenerales,
+        curated?.actividadesGenerales,
+        buildGeneralActivities(temasPersonalizados, area.nombre),
+      ) || [];
+
     const retroalimentacionGeneral =
-      curated?.retroalimentacionGeneral || buildGeneralFeedback(area.nombre);
+      personalizado?.retroalimentacionGeneral ||
+      curated?.retroalimentacionGeneral ||
+      buildGeneralFeedback(area.nombre);
 
     const descripcionDetallada =
+      personalizado?.descripcion ||
       curated?.descripcion ||
       area.descripcion ||
       `Colección de competencias, recursos y ejercicios de ${area.nombre || "esta área"} para ${code}.`;
+
+    const indicadoresPorCompetencia = indicadores.reduce((acc, indicador) => {
+      const compId = indicador?.competenciaId ? indicador.competenciaId.toString() : "otros";
+      if (!acc.has(compId)) acc.set(compId, []);
+      acc.get(compId).push(indicador);
+      return acc;
+    }, new Map());
+
+    const temasDesdeCompetencias = buildTopicsFromCompetencias({
+      areaName: area.nombre,
+      competencias: competenciasNormalizadas.map((comp) => ({
+        ...comp,
+        subtitulos: (indicadoresPorCompetencia.get(comp.id) || [])
+          .flatMap((indicator) => normalizeSubtopicsFromIndicator(indicator))
+          .filter(Boolean),
+        indicadorIds: (indicadoresPorCompetencia.get(comp.id) || []).map((ind) => ind._id),
+      })),
+      resources: recursosGenerales,
+    }).map((topic) => ({
+      ...topic,
+      indicadorIds: Array.isArray(topic.indicadorIds)
+        ? topic.indicadorIds.map((id) => id?.toString?.()).filter(Boolean)
+        : [],
+      recursos: mergeResourceBuckets(
+        topic.recursos,
+        collectResourcesForIndicators(recursosPorIndicador, topic.indicadorIds),
+      ),
+    }));
+
+    let temas = temasPersonalizados;
+    if (!temas.length) {
+      const curatedTopics = Array.isArray(curated?.temas)
+        ? curated.temas
+            .map((topic) => normalizeTopicFromDoc(topic))
+            .filter(Boolean)
+            .map((topic) => ({
+              ...topic,
+              recursos: mergeResourceBuckets(
+                topic.recursos,
+                collectResourcesForIndicators(recursosPorIndicador, topic.indicadorIds),
+              ),
+            }))
+        : [];
+
+      if (curatedTopics.length) {
+        temas = curatedTopics;
+      } else {
+        temas = temasDesdeCompetencias;
+      }
+    }
+
+    if (!temas.length) {
+      temas = buildFallbackTopics(area.nombre, recursosGenerales);
+    }
 
     const response = {
       id: String(area._id || areaId),
@@ -342,7 +568,7 @@ router.get("/basico/:grado/cursos/:areaId/contenidos", authRequired, async (req,
       titulo: area.nombre || area.slug || "Área sin nombre",
       descripcion: descripcionDetallada,
       competencias: competenciasNormalizadas,
-      recursos,
+      recursos: recursosGenerales,
       temas,
       actividades: actividadesGenerales,
       retroalimentacion: retroalimentacionGeneral,

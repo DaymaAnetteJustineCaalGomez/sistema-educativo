@@ -27,51 +27,6 @@ function resolveCourseAverage(course) {
   return 0;
 }
 
-function createSampleResources(areaName) {
-  const subject = areaName || 'Área';
-  const sampleUrl = 'https://aprende.mineduc.gob.gt';
-  const exercises = [
-    {
-      title: `Cuestionario diagnóstico de ${subject}`,
-      url: sampleUrl,
-      type: 'Evaluación',
-    },
-    {
-      title: `Taller interactivo de ${subject}`,
-      url: sampleUrl,
-      type: 'Práctica guiada',
-    },
-  ];
-  return {
-    videos: [
-      {
-        title: `${subject}: introducción guiada`,
-        url: sampleUrl,
-        duration: '06:00',
-      },
-      {
-        title: `${subject}: actividades prácticas`,
-        url: sampleUrl,
-        duration: '08:30',
-      },
-    ],
-    lecturas: [
-      {
-        title: `Guía de estudio de ${subject}`,
-        url: sampleUrl,
-        description: 'Resumen de contenidos clave alineados al CNB.',
-      },
-      {
-        title: `Planificación semanal de ${subject}`,
-        url: sampleUrl,
-        description: 'Secuencia sugerida de sesiones y actividades evaluables.',
-      },
-    ],
-    ejercicios: exercises,
-    cuestionarios: exercises,
-  };
-}
-
 function sentenceCase(text) {
   if (!text) return '';
   const trimmed = String(text).trim();
@@ -754,29 +709,16 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
 
       try {
         const payload = await api.cursoContenido(grado, areaId);
-        const sample = createSampleResources(course?.titulo || course?.area);
         const safeCompetencias = Array.isArray(payload?.competencias)
           ? payload.competencias
           : [];
         const safeRecursos = payload?.recursos || {};
         const courseName = course?.titulo || course?.area;
         const recursos = {
-          videos:
-            Array.isArray(safeRecursos.videos) && safeRecursos.videos.length
-              ? safeRecursos.videos
-              : sample.videos,
-          lecturas:
-            Array.isArray(safeRecursos.lecturas) && safeRecursos.lecturas.length
-              ? safeRecursos.lecturas
-              : sample.lecturas,
-          ejercicios:
-            Array.isArray(safeRecursos.ejercicios) && safeRecursos.ejercicios.length
-              ? safeRecursos.ejercicios
-              : sample.ejercicios,
-          cuestionarios:
-            Array.isArray(safeRecursos.cuestionarios) && safeRecursos.cuestionarios.length
-              ? safeRecursos.cuestionarios
-              : sample.cuestionarios,
+          videos: Array.isArray(safeRecursos.videos) ? safeRecursos.videos : [],
+          lecturas: Array.isArray(safeRecursos.lecturas) ? safeRecursos.lecturas : [],
+          ejercicios: Array.isArray(safeRecursos.ejercicios) ? safeRecursos.ejercicios : [],
+          cuestionarios: Array.isArray(safeRecursos.cuestionarios) ? safeRecursos.cuestionarios : [],
         };
 
         const providedTopics = Array.isArray(payload?.temas) ? payload.temas : [];
