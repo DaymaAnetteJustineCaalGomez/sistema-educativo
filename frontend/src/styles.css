@@ -31,6 +31,10 @@ body{
   place-items:center;
 }
 
+@media (max-width: 720px){
+  body{ padding:16px 12px; place-items:stretch }
+}
+
 body.dashboard-mode{
   color:var(--dash-text);
   background:
@@ -75,6 +79,14 @@ body.dashboard-mode .container{
 .formcol{ width:100%; display:flex; justify-content:center }
 .formwrap{ width:100%; max-width:540px; margin:0 auto }
 
+@media (max-width: 720px){
+  .grid{ gap:16px }
+  .formwrap{ max-width:100%; padding:14px; border-radius:16px; background:rgba(15,23,42,.38); border:1px solid rgba(255,255,255,.08) }
+  .brand{ padding:18px; border-radius:16px }
+  .brand img{ width:120px }
+  .actions{ flex-direction:column; align-items:flex-start }
+}
+
 /* Tabs */
 .switcher{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; justify-content:center }
 .switcher .sw{
@@ -95,6 +107,10 @@ body.dashboard-mode .container{
 }
 .sub{ color:#e2e8f0; font-weight:600; font-size:12px; margin:0 0 14px }
 
+.recovery-form{ gap:12px }
+.helper{ color:#cbd5e1; font-weight:600; font-size:13px }
+.info-box{ background:rgba(15,23,42,.65); border:1px solid rgba(255,255,255,.14); color:#e2e8f0; border-radius:12px; padding:10px; font-weight:700; font-size:13px }
+
 /* Form */
 form{ display:grid; gap:8px; text-align:left }
 label.field{ font-weight:800; font-size:12px; color:#ffffff }
@@ -107,6 +123,7 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 @media (max-width: 560px){ .row{ grid-template-columns:1fr } }
 .actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap }
 .link{ color:#e5e7eb; text-decoration:none; font-weight:800; font-size:12px }
+.link-btn{ background:none; border:0; padding:0; cursor:pointer; color:inherit; font:inherit }
 .btn, .btn-secondary{
   border:0; padding:10px 16px; border-radius:999px; font-weight:800; cursor:pointer; font-size:14px;
   display:inline-flex; align-items:center; gap:8px
@@ -165,6 +182,14 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   box-shadow:0 28px 72px rgba(148,163,184,.25);
   backdrop-filter:blur(24px);
   color:var(--dash-text);
+}
+
+@media (max-width: 900px){
+  body.dashboard-mode{ padding:24px 16px }
+  .dashboard{ gap:20px; padding:20px; box-shadow:0 18px 38px rgba(148,163,184,.18) }
+  .dashboard-layout{ grid-template-columns:1fr; gap:20px }
+  .dashboard-aside, .dashboard-aside--student{ position:static }
+  .dashboard-main{ gap:20px }
 }
 
 .dashboard-layout{
@@ -355,6 +380,11 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   border-radius:24px;
   padding:clamp(22px, 4vw, 36px);
 }
+.dashboard-hero p{ margin-bottom:0 }
+
+@media (max-width: 900px){
+  .dashboard-hero{ padding:18px; gap:16px }
+}
 .dashboard-hero--teacher{ background:linear-gradient(135deg, rgba(59,130,246,.14), rgba(16,185,129,.12)); border-color:rgba(59,130,246,.2) }
 .dashboard-hero--admin{ background:linear-gradient(135deg, rgba(244,114,182,.14), rgba(249,115,22,.12)); border-color:rgba(249,115,22,.22) }
 .dashboard-hero__eyebrow{
@@ -437,6 +467,10 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .metric-card__value{ font-size:clamp(22px, 3.2vw, 30px); font-weight:800; color:var(--dash-text) }
 .metric-card__hint{ margin:0; color:var(--dash-muted); font-size:13px }
 
+@media (max-width: 900px){
+  .metric-card{ padding:16px; gap:6px }
+}
+
 .section-header{
   display:flex;
   justify-content:space-between;
@@ -470,6 +504,8 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 @media (max-width:960px){
   .student-section--recommendations{ grid-template-columns:1fr }
 }
+.student-recommendations__history{ gap:10px }
+.student-recommendations__history li{ gap:6px }
 .student-recommendations__main{ display:flex; flex-direction:column; gap:16px }
 .student-recommendations__pill{ align-self:flex-start; padding:6px 14px; border-radius:999px; background:rgba(255,255,255,.7); color:#be185d; font-weight:700; font-size:12px; letter-spacing:.04em }
 .student-recommendations__history{ background:var(--dash-surface-strong); border-radius:20px; border:1px solid var(--dash-border); padding:20px; display:flex; flex-direction:column; gap:12px }
@@ -493,6 +529,14 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .course-card__button{ align-self:flex-start; padding:9px 16px; border-radius:999px; border:0; background:rgba(99,102,241,.12); color:var(--dash-primary-dark); font-weight:700; cursor:pointer }
 .course-card__button:hover{ background:rgba(99,102,241,.18) }
 .course-card__button[disabled]{ opacity:.6; cursor:not-allowed }
+
+@media (max-width: 900px){
+  .student-section--recommendations{ padding:20px; gap:18px }
+  .student-recommendations__history{ padding:16px }
+  .student-section--notifications{ align-items:flex-start; gap:14px }
+  .course-card{ padding:16px; gap:12px }
+  .course-grid{ grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px }
+}
 
 .toggle{ position:relative; width:160px; padding:9px 14px 9px 42px; border-radius:999px; border:1px solid rgba(99,102,241,.24); font-weight:700; cursor:pointer; background:#fff; color:var(--dash-muted); text-align:left }
 .toggle__indicator{ position:absolute; left:10px; top:50%; transform:translateY(-50%); width:22px; height:22px; border-radius:50%; background:rgba(148,163,184,.4); transition:background .2s ease }
