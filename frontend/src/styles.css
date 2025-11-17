@@ -19,7 +19,11 @@ body{
   margin:0;
   font-family:'Inter',system-ui,Segoe UI,Roboto,Arial;
   color:#e5e7eb;
-  background:
+  background-color:#0f1628;
+  background-repeat:no-repeat;
+  background-position:center top;
+  background-size:cover;
+  background-image:
     radial-gradient(44vw 36vh at 82% 12%, rgba(124,58,237,.28), transparent 65%),
     radial-gradient(40vw 35vh at 10% 16%, rgba(236,72,153,.28), transparent 68%),
     radial-gradient(38vw 40vh at 86% 82%, rgba(251,146,60,.28), transparent 70%),
@@ -37,13 +41,17 @@ body{
 
 body.dashboard-mode{
   color:var(--dash-text);
-  background:
-    radial-gradient(46vw 38vh at 80% 12%, rgba(99,102,241,.22), transparent 70%),
-    radial-gradient(44vw 36vh at 18% 18%, rgba(236,72,153,.18), transparent 72%),
-    radial-gradient(42vw 40vh at 88% 82%, rgba(251,146,60,.16), transparent 74%),
+  background-color:#161b32;
+  background-repeat:no-repeat;
+  background-position:center top;
+  background-size:cover;
+  background-image:
+    radial-gradient(62vw 48vh at 76% 10%, rgba(99,102,241,.22), transparent 68%),
+    radial-gradient(58vw 42vh at 18% 18%, rgba(236,72,153,.18), transparent 70%),
+    radial-gradient(60vw 44vh at 88% 86%, rgba(251,146,60,.16), transparent 72%),
     linear-gradient(180deg, #1d2340 0%, #262c4f 48%, #1f2544 100%);
   display:block;
-  padding:clamp(32px, 5vw, 64px);
+  padding:clamp(24px, 4.2vw, 52px);
 }
 
 body.dashboard-mode .container{
@@ -190,6 +198,18 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   .dashboard-layout{ grid-template-columns:1fr; gap:20px }
   .dashboard-aside, .dashboard-aside--student{ position:static }
   .dashboard-main{ gap:20px }
+}
+
+@media (max-width: 640px){
+  body.dashboard-mode{ padding:14px 10px }
+  .dashboard{ gap:16px; padding:16px; border-radius:18px; box-shadow:0 12px 28px rgba(148,163,184,.16) }
+  .dashboard-header{ gap:12px }
+  .dashboard-header__title{ font-size:13px }
+  .dashboard-header__badge{ padding:6px 12px; font-size:11px }
+  .dashboard-layout--student{ gap:16px }
+  .dashboard-hero-card, .dashboard-menu, .student-section--notifications{ padding:16px; border-radius:18px }
+  .dashboard-hero-card h1{ font-size:22px }
+  .dashboard-hero-card p{ font-size:14px }
 }
 
 .dashboard-layout{
@@ -536,6 +556,14 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   .student-section--notifications{ align-items:flex-start; gap:14px }
   .course-card{ padding:16px; gap:12px }
   .course-grid{ grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px }
+}
+
+@media (max-width: 640px){
+  .course-grid{ grid-template-columns:1fr; gap:14px }
+  .course-card{ padding:14px; border-radius:16px }
+  .section-header{ gap:12px }
+  .section-header h2{ font-size:20px }
+  .section-header p{ font-size:13px }
 }
 
 .toggle{ position:relative; width:160px; padding:9px 14px 9px 42px; border-radius:999px; border:1px solid rgba(99,102,241,.24); font-weight:700; cursor:pointer; background:#fff; color:var(--dash-muted); text-align:left }
