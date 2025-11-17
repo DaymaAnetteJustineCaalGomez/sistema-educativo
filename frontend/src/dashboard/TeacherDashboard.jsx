@@ -455,7 +455,7 @@ export default function TeacherDashboard({ user, onLogout }) {
     <div className="dashboard dashboard--teacher">
       <DashboardHeader user={user} onLogout={onLogout} badge="Docente" />
 
-      <div className="dashboard-layout">
+      <div className="dashboard-layout dashboard-layout--teacher">
         <main className="dashboard-main">
           <section id="informe-estudiantil" className="teacher-section teacher-section--report">
             <header className="section-header">

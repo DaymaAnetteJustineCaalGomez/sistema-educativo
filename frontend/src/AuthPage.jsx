@@ -47,13 +47,38 @@ export default function AuthPage(){
   const [cooldown, setCooldown] = useState(0)
   const [loadingL, setLoadingL] = useState(false)
   const [loadingS, setLoadingS] = useState(false)
+  const [loadingRecovery, setLoadingRecovery] = useState(false)
   const [toast, setToast] = useState({ show:false, msg:'' })
   const timerRef = useRef(null)
+  const [recoveryStep, setRecoveryStep] = useState('none') // none | request | reset
+  const [recoveryEmail, setRecoveryEmail] = useState('')
+  const [resetToken, setResetToken] = useState('')
+  const [resetPasswords, setResetPasswords] = useState({ p1:'', p2:'' })
+  const [recoveryInfo, setRecoveryInfo] = useState('')
 
   // helpers para limpiar formularios
   const resetLogin  = () => setLogin({ email:'', password:'' })
   const resetSignup = () => setSignup({ name:'', role:'', email:'', p1:'', p2:'', code:'' })
-  const goTab = (next) => { setTab(next); if (next==='login') resetLogin(); if (next==='signup') resetSignup() }
+  const goTab = (next) => {
+    setTab(next)
+    if (next==='login') resetLogin()
+    if (next==='signup') { resetSignup(); exitRecovery() }
+  }
+
+  const clearResetUrl = () => {
+    if (typeof window === 'undefined') return
+    const basePath = '/' // SPA root
+    window.history.replaceState({}, '', basePath)
+  }
+
+  const exitRecovery = () => {
+    setRecoveryStep('none')
+    setRecoveryEmail('')
+    setResetToken('')
+    setResetPasswords({ p1:'', p2:'' })
+    setRecoveryInfo('')
+    clearResetUrl()
+  }
 
   const showToast = (msg, ms=3600) => {
     setToast({ show:true, msg })
@@ -127,6 +152,22 @@ export default function AuthPage(){
     return () => document.body.classList.remove('dashboard-mode')
   }, [user])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    if (window.location.pathname.includes('reset-password')) {
+      setTab('login')
+      if (token) {
+        setRecoveryStep('reset')
+        setResetToken(token)
+      } else {
+        setRecoveryStep('request')
+      }
+      window.scrollTo(0, 0)
+    }
+  }, [])
+
   const sendCode = async () => {
     const { email, role } = signup
     if (!email || !role) return showToast('Primero escribe el correo y el rol.')
@@ -178,6 +219,42 @@ export default function AuthPage(){
     }
   }
 
+  const onRequestReset = async (e) => {
+    e.preventDefault()
+    setRecoveryInfo('')
+    if (!recoveryEmail.trim()) return showToast('Escribe tu correo electrónico.')
+    try {
+      setLoadingRecovery(true)
+      await api.forgotPassword(recoveryEmail.trim())
+      setRecoveryInfo('Si el correo existe, te enviamos un enlace para recuperar tu contraseña. Revisa tu bandeja de entrada o spam.')
+    } catch (err) {
+      showToast(err.message || 'No se pudo solicitar el enlace')
+    } finally {
+      setLoadingRecovery(false)
+    }
+  }
+
+  const onResetPassword = async (e) => {
+    e.preventDefault()
+    if (!resetToken) return showToast('El enlace de recuperación no es válido.')
+    if (!resetPasswords.p1.trim()) return showToast('Escribe tu nueva contraseña')
+    if (resetPasswords.p1 !== resetPasswords.p2) return showToast('Las contraseñas no coinciden')
+    if (resetPasswords.p1.trim().length < 8) return showToast('La contraseña debe tener al menos 8 caracteres')
+
+    try {
+      setLoadingRecovery(true)
+      await api.resetPassword(resetToken, resetPasswords.p1.trim())
+      showToast('Contraseña actualizada. Inicia sesión con tu nueva contraseña.')
+      exitRecovery()
+      setTab('login')
+      clearResetUrl()
+    } catch (err) {
+      showToast(err.message || 'No se pudo restablecer la contraseña')
+    } finally {
+      setLoadingRecovery(false)
+    }
+  }
+
   const onLogout = async () => {
     clearToken()
     setUser(null)
@@ -202,7 +279,7 @@ export default function AuthPage(){
                 <div className="sub">Te damos la bienvenida</div>
               </div>
 
-              {tab==='login' ? (
+              {tab==='login' && recoveryStep==='none' ? (
                 <form onSubmit={onLogin} autoComplete="on">
                   <div>
                     <label className="field" htmlFor="lemail">Correo electrónico</label>
@@ -218,8 +295,54 @@ export default function AuthPage(){
                     </div>
                   </div>
                   <div className="actions">
-                    <a className="link" href="#">¿Olvidaste tu contraseña?</a>
+                    <button className="link link-btn" type="button" onClick={() => { setRecoveryStep('request'); setTab('login'); }}>
+                      ¿Olvidaste tu contraseña?
+                    </button>
                     <button className="btn" type="submit" disabled={loadingL}>{loadingL?'Entrando...':'Entrar'}</button>
+                  </div>
+                </form>
+              ) : tab==='login' && recoveryStep==='request' ? (
+                <form onSubmit={onRequestReset} autoComplete="on" className="recovery-form">
+                  <div className="helper">Te enviaremos un enlace para restablecer tu contraseña.</div>
+                  <div>
+                    <label className="field" htmlFor="recoveryEmail">Correo electrónico</label>
+                    <input className="input" id="recoveryEmail" type="email" placeholder="tucorreo@gmail.com" required
+                      value={recoveryEmail} onChange={e=>setRecoveryEmail(e.target.value)}/>
+                  </div>
+                  {recoveryInfo && <div className="info-box">{recoveryInfo}</div>}
+                  <div className="actions">
+                    <button className="link link-btn" type="button" onClick={exitRecovery}>Volver a iniciar sesión</button>
+                    <button className="btn" type="submit" disabled={loadingRecovery}>
+                      {loadingRecovery ? 'Enviando...' : 'Enviar enlace'}
+                    </button>
+                  </div>
+                </form>
+              ) : tab==='login' && recoveryStep==='reset' ? (
+                <form onSubmit={onResetPassword} autoComplete="on" className="recovery-form">
+                  <div className="helper">Escribe tu nueva contraseña para continuar.</div>
+                  <div className="row">
+                    <div>
+                      <label className="field" htmlFor="newpass">Nueva contraseña</label>
+                      <div className="input-wrap">
+                        <input className="input" id="newpass" type="password" placeholder="Mínimo 8 caracteres" required
+                          value={resetPasswords.p1} onChange={e=>setResetPasswords(v=>({...v, p1:e.target.value}))}/>
+                        <div className="eye-btn"><Eye targetId="newpass" /></div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="field" htmlFor="confirm">Confirmar</label>
+                      <div className="input-wrap">
+                        <input className="input" id="confirm" type="password" placeholder="Repite tu contraseña" required
+                          value={resetPasswords.p2} onChange={e=>setResetPasswords(v=>({...v, p2:e.target.value}))}/>
+                        <div className="eye-btn"><Eye targetId="confirm" /></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="actions">
+                    <button className="link link-btn" type="button" onClick={exitRecovery}>Volver al inicio</button>
+                    <button className="btn" type="submit" disabled={loadingRecovery}>
+                      {loadingRecovery ? 'Guardando...' : 'Actualizar contraseña'}
+                    </button>
                   </div>
                 </form>
               ) : (

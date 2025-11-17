@@ -19,7 +19,11 @@ body{
   margin:0;
   font-family:'Inter',system-ui,Segoe UI,Roboto,Arial;
   color:#e5e7eb;
-  background:
+  background-color:#0f1628;
+  background-repeat:no-repeat;
+  background-position:center top;
+  background-size:cover;
+  background-image:
     radial-gradient(44vw 36vh at 82% 12%, rgba(124,58,237,.28), transparent 65%),
     radial-gradient(40vw 35vh at 10% 16%, rgba(236,72,153,.28), transparent 68%),
     radial-gradient(38vw 40vh at 86% 82%, rgba(251,146,60,.28), transparent 70%),
@@ -31,15 +35,25 @@ body{
   place-items:center;
 }
 
+@media (max-width: 720px){
+  body{ padding:16px 12px; place-items:stretch }
+}
+
 body.dashboard-mode{
   color:var(--dash-text);
-  background:
-    radial-gradient(46vw 38vh at 80% 12%, rgba(99,102,241,.22), transparent 70%),
-    radial-gradient(44vw 36vh at 18% 18%, rgba(236,72,153,.18), transparent 72%),
-    radial-gradient(42vw 40vh at 88% 82%, rgba(251,146,60,.16), transparent 74%),
+  background-color:#161b32;
+  background-repeat:no-repeat;
+  background-position:center top;
+  background-size: 180% 180%, 170% 170%, 180% 180%, cover;
+  background-attachment:fixed;
+  background-image:
+    radial-gradient(62vw 48vh at 76% 10%, rgba(99,102,241,.22), transparent 68%),
+    radial-gradient(58vw 42vh at 18% 18%, rgba(236,72,153,.18), transparent 70%),
+    radial-gradient(60vw 44vh at 88% 86%, rgba(251,146,60,.16), transparent 72%),
     linear-gradient(180deg, #1d2340 0%, #262c4f 48%, #1f2544 100%);
   display:block;
-  padding:clamp(32px, 5vw, 64px);
+  padding:clamp(18px, 3vw, 46px);
+  overflow-x:hidden;
 }
 
 body.dashboard-mode .container{
@@ -75,6 +89,14 @@ body.dashboard-mode .container{
 .formcol{ width:100%; display:flex; justify-content:center }
 .formwrap{ width:100%; max-width:540px; margin:0 auto }
 
+@media (max-width: 720px){
+  .grid{ gap:16px }
+  .formwrap{ max-width:100%; padding:14px; border-radius:16px; background:rgba(15,23,42,.38); border:1px solid rgba(255,255,255,.08) }
+  .brand{ padding:18px; border-radius:16px }
+  .brand img{ width:120px }
+  .actions{ flex-direction:column; align-items:flex-start }
+}
+
 /* Tabs */
 .switcher{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; justify-content:center }
 .switcher .sw{
@@ -95,6 +117,10 @@ body.dashboard-mode .container{
 }
 .sub{ color:#e2e8f0; font-weight:600; font-size:12px; margin:0 0 14px }
 
+.recovery-form{ gap:12px }
+.helper{ color:#cbd5e1; font-weight:600; font-size:13px }
+.info-box{ background:rgba(15,23,42,.65); border:1px solid rgba(255,255,255,.14); color:#e2e8f0; border-radius:12px; padding:10px; font-weight:700; font-size:13px }
+
 /* Form */
 form{ display:grid; gap:8px; text-align:left }
 label.field{ font-weight:800; font-size:12px; color:#ffffff }
@@ -107,6 +133,7 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 @media (max-width: 560px){ .row{ grid-template-columns:1fr } }
 .actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap }
 .link{ color:#e5e7eb; text-decoration:none; font-weight:800; font-size:12px }
+.link-btn{ background:none; border:0; padding:0; cursor:pointer; color:inherit; font:inherit }
 .btn, .btn-secondary{
   border:0; padding:10px 16px; border-radius:999px; font-weight:800; cursor:pointer; font-size:14px;
   display:inline-flex; align-items:center; gap:8px
@@ -162,9 +189,31 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   border-radius:28px;
   padding:clamp(24px, 4vw, 40px);
   width:100%;
+  max-width:1180px;
   box-shadow:0 28px 72px rgba(148,163,184,.25);
   backdrop-filter:blur(24px);
   color:var(--dash-text);
+  margin:0 auto;
+}
+
+@media (max-width: 900px){
+  body.dashboard-mode{ padding:18px 14px }
+  .dashboard{ gap:20px; padding:18px; box-shadow:0 18px 38px rgba(148,163,184,.18); border-radius:22px }
+  .dashboard-layout{ grid-template-columns:1fr; gap:20px }
+  .dashboard-aside, .dashboard-aside--student{ position:static }
+  .dashboard-main{ gap:20px }
+}
+
+@media (max-width: 640px){
+  body.dashboard-mode{ padding:12px 10px }
+  .dashboard{ gap:14px; padding:14px; border-radius:16px; box-shadow:0 12px 28px rgba(148,163,184,.16) }
+  .dashboard-header{ gap:12px }
+  .dashboard-header__title{ font-size:13px }
+  .dashboard-header__badge{ padding:6px 12px; font-size:11px }
+  .dashboard-layout--student{ gap:14px }
+  .dashboard-hero-card, .dashboard-menu, .student-section--notifications{ padding:14px; border-radius:16px }
+  .dashboard-hero-card h1{ font-size:22px }
+  .dashboard-hero-card p{ font-size:14px }
 }
 
 .dashboard-layout{
@@ -172,10 +221,17 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   grid-template-columns:minmax(0,1fr) minmax(260px,320px);
   gap:32px;
   align-items:start;
+  width:100%;
+}
+
+.dashboard-layout--teacher{
+  grid-template-columns:minmax(0,1fr) minmax(260px,320px);
 }
 
 .dashboard-layout--student{
   grid-template-columns:minmax(260px,320px) minmax(0,1fr);
+  width:100%;
+  align-items:stretch;
 }
 
 .dashboard-aside--student{
@@ -189,6 +245,16 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   gap:32px;
 }
 
+@media (max-width: 1040px){
+  .dashboard{ max-width:100%; }
+  .dashboard-layout,
+  .dashboard-layout--teacher,
+  .dashboard-layout--admin{ grid-template-columns:1fr; }
+  .dashboard-aside,
+  .dashboard-aside--student,
+  .dashboard-aside--admin{ position:static; width:100%; }
+}
+
 .dashboard-aside{
   display:flex;
   flex-direction:column;
@@ -198,13 +264,20 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 }
 
 .dashboard-hero-card{
-  background:linear-gradient(160deg, rgba(148,163,255,.2), rgba(236,72,153,.16));
-  border:1px solid rgba(99,102,241,.24);
+  background:
+    linear-gradient(160deg, rgba(79,70,229,.36), rgba(14,165,233,.2)),
+    linear-gradient(160deg, rgba(148,163,255,.25), rgba(236,72,153,.16));
+  border:1px solid rgba(99,102,241,.32);
   border-radius:24px;
   padding:24px;
   display:flex;
   flex-direction:column;
   gap:14px;
+  color:#f8fafc;
+  width:100%;
+  min-width:0;
+  position:relative;
+  overflow:hidden;
 }
 
 .dashboard-hero-card--teacher{
@@ -215,11 +288,12 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .dashboard-hero-card h1{
   margin:0;
   font-size:clamp(24px, 3vw, 30px);
+  color:#ffffff;
 }
 
 .dashboard-hero-card p{
   margin:0;
-  color:var(--dash-muted);
+  color:rgba(248,250,252,.88);
   line-height:1.45;
 }
 
@@ -231,6 +305,10 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   display:flex;
   flex-direction:column;
   gap:16px;
+  width:100%;
+  min-width:0;
+  position:relative;
+  z-index:1;
 }
 
 .dashboard-menu h2{
@@ -355,6 +433,11 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   border-radius:24px;
   padding:clamp(22px, 4vw, 36px);
 }
+.dashboard-hero p{ margin-bottom:0 }
+
+@media (max-width: 900px){
+  .dashboard-hero{ padding:18px; gap:16px }
+}
 .dashboard-hero--teacher{ background:linear-gradient(135deg, rgba(59,130,246,.14), rgba(16,185,129,.12)); border-color:rgba(59,130,246,.2) }
 .dashboard-hero--admin{ background:linear-gradient(135deg, rgba(244,114,182,.14), rgba(249,115,22,.12)); border-color:rgba(249,115,22,.22) }
 .dashboard-hero__eyebrow{
@@ -362,7 +445,7 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   font-weight:800;
   letter-spacing:.12em;
   text-transform:uppercase;
-  color:var(--dash-muted);
+  color:rgba(226,232,240,.86);
   margin:0 0 10px;
 }
 .dashboard-hero h1{
@@ -374,8 +457,13 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .dashboard-hero p{
   margin:0;
   max-width:50ch;
-  color:var(--dash-muted);
+  color:rgba(226,232,240,.9);
   font-weight:500;
+}
+
+.student-recommendations__main h2,
+.student-recommendations__main p{
+  color:#f8fafc;
 }
 
 .teacher-section--history{
@@ -437,6 +525,10 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .metric-card__value{ font-size:clamp(22px, 3.2vw, 30px); font-weight:800; color:var(--dash-text) }
 .metric-card__hint{ margin:0; color:var(--dash-muted); font-size:13px }
 
+@media (max-width: 900px){
+  .metric-card{ padding:16px; gap:6px }
+}
+
 .section-header{
   display:flex;
   justify-content:space-between;
@@ -449,6 +541,45 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .section-note{ font-size:12px; font-weight:700; color:var(--dash-muted); background:rgba(148,163,184,.16); padding:6px 12px; border-radius:999px }
 
 /* Student dashboard */
+.student-shell{ display:flex; flex-direction:column; gap:22px; max-width:1180px; margin:0 auto; padding:0 6px }
+.student-hero-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+  gap:18px;
+  padding:clamp(18px, 3vw, 26px);
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.14);
+  background:
+    radial-gradient(90% 120% at 14% 16%, rgba(99,102,241,.32), transparent 60%),
+    radial-gradient(120% 120% at 90% 10%, rgba(14,165,233,.24), transparent 62%),
+    radial-gradient(120% 140% at 100% 100%, rgba(236,72,153,.28), transparent 70%),
+    linear-gradient(130deg, #0f1628 0%, #1c2442 52%, #111524 100%);
+  color:#e2e8f0;
+  box-shadow:0 28px 64px rgba(15,23,42,.35);
+  position:relative;
+  overflow:hidden;
+}
+.student-hero__text{ display:flex; flex-direction:column; gap:12px; z-index:1 }
+.student-hero__eyebrow{ margin:0; font-size:12px; letter-spacing:.08em; font-weight:800; text-transform:uppercase; color:#c7d2fe }
+.student-hero__text h1{ margin:0; font-size:clamp(26px,4vw,32px); font-weight:900; color:#fff }
+.student-hero__text p{ margin:0; color:#cbd5e1; line-height:1.55 }
+.student-hero__highlights{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:6px }
+.hero-highlight{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:6px }
+.hero-highlight span{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#cbd5e1 }
+.hero-highlight strong{ font-size:20px; font-weight:900; color:#fff }
+.student-hero__actions{ display:grid; gap:12px; align-content:start }
+.hero-notifications{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:12px; display:flex; justify-content:space-between; align-items:center; gap:12px; color:#e2e8f0 }
+.hero-summary{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:14px; color:#e2e8f0; display:flex; flex-direction:column; gap:4px }
+.hero-summary__eyebrow{ margin:0; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#cbd5e1 }
+.hero-summary__title{ margin:0; font-size:16px; font-weight:800; color:#fff }
+.hero-summary__hint{ margin:0; color:#cbd5e1; font-size:13px }
+
+.student-quick-links{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px }
+.quick-link{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; text-decoration:none; color:var(--dash-text); background:rgba(255,255,255,.86); border:1px solid rgba(99,102,241,.18); font-weight:800; box-shadow:0 12px 28px rgba(148,163,184,.24); transition:transform .15s ease, box-shadow .15s ease }
+.quick-link__icon{ font-size:18px }
+.quick-link__label{ font-size:14px }
+.quick-link:hover{ transform:translateY(-2px); box-shadow:0 18px 34px rgba(148,163,184,.28) }
+
 .student-section{ display:flex; flex-wrap:wrap; gap:20px; border-radius:20px }
 .student-section--metrics{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:20px }
 .student-section--notifications{
@@ -459,17 +590,20 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   padding:22px;
 }
 .student-section--recommendations{
-  background:linear-gradient(135deg, rgba(236,72,153,.08), rgba(14,165,233,.08));
-  border:1px solid rgba(236,72,153,.2);
+  background:linear-gradient(145deg, rgba(67,56,202,.26), rgba(14,165,233,.18));
+  border:1px solid rgba(79,70,229,.32);
   padding: clamp(24px,4vw,36px);
   border-radius:24px;
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(0,320px);
   gap:28px;
+  color:#f8fafc;
 }
 @media (max-width:960px){
   .student-section--recommendations{ grid-template-columns:1fr }
 }
+.student-recommendations__history{ gap:10px }
+.student-recommendations__history li{ gap:6px }
 .student-recommendations__main{ display:flex; flex-direction:column; gap:16px }
 .student-recommendations__pill{ align-self:flex-start; padding:6px 14px; border-radius:999px; background:rgba(255,255,255,.7); color:#be185d; font-weight:700; font-size:12px; letter-spacing:.04em }
 .student-recommendations__history{ background:var(--dash-surface-strong); border-radius:20px; border:1px solid var(--dash-border); padding:20px; display:flex; flex-direction:column; gap:12px }
@@ -483,8 +617,8 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .student-status{ padding:18px; border-radius:18px; border:1px dashed rgba(99,102,241,.24); background:rgba(99,102,241,.06); color:var(--dash-muted); font-weight:600; text-align:center }
 .student-status--error{ border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.12); color:#b91c1c }
 
-.course-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:20px }
-.course-card{ display:flex; flex-direction:column; gap:16px; background:var(--dash-surface-strong); border:1px solid var(--dash-border); border-radius:20px; padding:22px; box-shadow:0 16px 36px rgba(148,163,184,.18) }
+.course-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:14px }
+.course-card{ display:flex; flex-direction:column; gap:12px; background:rgba(255,255,255,.92); border:1px solid rgba(99,102,241,.14); border-radius:18px; padding:16px; box-shadow:0 14px 34px rgba(148,163,184,.2) }
 .course-card header{ display:flex; flex-direction:column; gap:6px }
 .course-card h3{ margin:0; font-size:18px; font-weight:800; color:var(--dash-text) }
 .course-card p{ margin:0; color:var(--dash-muted); font-size:13px }
@@ -493,6 +627,28 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .course-card__button{ align-self:flex-start; padding:9px 16px; border-radius:999px; border:0; background:rgba(99,102,241,.12); color:var(--dash-primary-dark); font-weight:700; cursor:pointer }
 .course-card__button:hover{ background:rgba(99,102,241,.18) }
 .course-card__button[disabled]{ opacity:.6; cursor:not-allowed }
+
+@media (max-width: 900px){
+  .student-shell{ gap:18px }
+  .student-hero-panel{ grid-template-columns:1fr; padding:18px }
+  .student-hero__actions{ grid-template-columns:repeat(auto-fit,minmax(220px,1fr)) }
+  .student-section--recommendations{ padding:20px; gap:18px }
+  .student-recommendations__history{ padding:16px }
+  .student-section--notifications{ align-items:flex-start; gap:14px }
+  .course-card{ padding:14px; gap:10px }
+  .course-grid{ grid-template-columns:1fr; gap:12px }
+}
+
+@media (max-width: 640px){
+  .student-shell{ padding:0 }
+  .student-hero-panel{ border-radius:18px }
+  .student-hero__highlights{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)) }
+  .course-grid{ grid-template-columns:1fr; gap:12px }
+  .course-card{ padding:12px; border-radius:14px }
+  .section-header{ gap:12px }
+  .section-header h2{ font-size:20px }
+  .section-header p{ font-size:13px }
+}
 
 .toggle{ position:relative; width:160px; padding:9px 14px 9px 42px; border-radius:999px; border:1px solid rgba(99,102,241,.24); font-weight:700; cursor:pointer; background:#fff; color:var(--dash-muted); text-align:left }
 .toggle__indicator{ position:absolute; left:10px; top:50%; transform:translateY(-50%); width:22px; height:22px; border-radius:50%; background:rgba(148,163,184,.4); transition:background .2s ease }
@@ -776,7 +932,9 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 /* Ajustes responsivos */
 @media (max-width:720px){
   .dashboard{ padding:22px }
-  .dashboard-header{ gap:14px }
+  .dashboard-header{ gap:14px; flex-direction:column; align-items:flex-start }
+  .dashboard-header__brand,.dashboard-header__user{ width:100%; justify-content:space-between }
+  .dashboard-header__user{ align-items:flex-start }
   .dashboard-hero{ flex-direction:column }
   .toggle{ width:140px }
   .teacher-table__head, .teacher-table__row{ grid-template-columns:repeat(4, minmax(0,1fr)); grid-auto-flow:row dense }
