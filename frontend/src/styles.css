@@ -188,7 +188,7 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
   border-radius:28px;
   padding:clamp(24px, 4vw, 40px);
   width:100%;
-  max-width:1100px;
+  max-width:1200px;
   box-shadow:0 28px 72px rgba(148,163,184,.25);
   backdrop-filter:blur(24px);
   color:var(--dash-text);
@@ -518,6 +518,45 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .section-note{ font-size:12px; font-weight:700; color:var(--dash-muted); background:rgba(148,163,184,.16); padding:6px 12px; border-radius:999px }
 
 /* Student dashboard */
+.student-shell{ display:flex; flex-direction:column; gap:22px; max-width:1180px; margin:0 auto; padding:0 6px }
+.student-hero-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+  gap:18px;
+  padding:clamp(18px, 3vw, 26px);
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.14);
+  background:
+    radial-gradient(90% 120% at 14% 16%, rgba(99,102,241,.32), transparent 60%),
+    radial-gradient(120% 120% at 90% 10%, rgba(14,165,233,.24), transparent 62%),
+    radial-gradient(120% 140% at 100% 100%, rgba(236,72,153,.28), transparent 70%),
+    linear-gradient(130deg, #0f1628 0%, #1c2442 52%, #111524 100%);
+  color:#e2e8f0;
+  box-shadow:0 28px 64px rgba(15,23,42,.35);
+  position:relative;
+  overflow:hidden;
+}
+.student-hero__text{ display:flex; flex-direction:column; gap:12px; z-index:1 }
+.student-hero__eyebrow{ margin:0; font-size:12px; letter-spacing:.08em; font-weight:800; text-transform:uppercase; color:#c7d2fe }
+.student-hero__text h1{ margin:0; font-size:clamp(26px,4vw,32px); font-weight:900; color:#fff }
+.student-hero__text p{ margin:0; color:#cbd5e1; line-height:1.55 }
+.student-hero__highlights{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:6px }
+.hero-highlight{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:6px }
+.hero-highlight span{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#cbd5e1 }
+.hero-highlight strong{ font-size:20px; font-weight:900; color:#fff }
+.student-hero__actions{ display:grid; gap:12px; align-content:start }
+.hero-notifications{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:12px; display:flex; justify-content:space-between; align-items:center; gap:12px; color:#e2e8f0 }
+.hero-summary{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:14px; color:#e2e8f0; display:flex; flex-direction:column; gap:4px }
+.hero-summary__eyebrow{ margin:0; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#cbd5e1 }
+.hero-summary__title{ margin:0; font-size:16px; font-weight:800; color:#fff }
+.hero-summary__hint{ margin:0; color:#cbd5e1; font-size:13px }
+
+.student-quick-links{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px }
+.quick-link{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; text-decoration:none; color:var(--dash-text); background:rgba(255,255,255,.86); border:1px solid rgba(99,102,241,.18); font-weight:800; box-shadow:0 12px 28px rgba(148,163,184,.24); transition:transform .15s ease, box-shadow .15s ease }
+.quick-link__icon{ font-size:18px }
+.quick-link__label{ font-size:14px }
+.quick-link:hover{ transform:translateY(-2px); box-shadow:0 18px 34px rgba(148,163,184,.28) }
+
 .student-section{ display:flex; flex-wrap:wrap; gap:20px; border-radius:20px }
 .student-section--metrics{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:20px }
 .student-section--notifications{
@@ -555,8 +594,8 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .student-status{ padding:18px; border-radius:18px; border:1px dashed rgba(99,102,241,.24); background:rgba(99,102,241,.06); color:var(--dash-muted); font-weight:600; text-align:center }
 .student-status--error{ border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.12); color:#b91c1c }
 
-.course-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:18px }
-.course-card{ display:flex; flex-direction:column; gap:16px; background:var(--dash-surface-strong); border:1px solid var(--dash-border); border-radius:20px; padding:22px; box-shadow:0 16px 36px rgba(148,163,184,.18) }
+.course-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:14px }
+.course-card{ display:flex; flex-direction:column; gap:12px; background:rgba(255,255,255,.92); border:1px solid rgba(99,102,241,.14); border-radius:18px; padding:16px; box-shadow:0 14px 34px rgba(148,163,184,.2) }
 .course-card header{ display:flex; flex-direction:column; gap:6px }
 .course-card h3{ margin:0; font-size:18px; font-weight:800; color:var(--dash-text) }
 .course-card p{ margin:0; color:var(--dash-muted); font-size:13px }
@@ -567,16 +606,22 @@ label.field{ font-weight:800; font-size:12px; color:#ffffff }
 .course-card__button[disabled]{ opacity:.6; cursor:not-allowed }
 
 @media (max-width: 900px){
+  .student-shell{ gap:18px }
+  .student-hero-panel{ grid-template-columns:1fr; padding:18px }
+  .student-hero__actions{ grid-template-columns:repeat(auto-fit,minmax(220px,1fr)) }
   .student-section--recommendations{ padding:20px; gap:18px }
   .student-recommendations__history{ padding:16px }
   .student-section--notifications{ align-items:flex-start; gap:14px }
-  .course-card{ padding:16px; gap:12px }
-  .course-grid{ grid-template-columns:1fr; gap:14px }
+  .course-card{ padding:14px; gap:10px }
+  .course-grid{ grid-template-columns:1fr; gap:12px }
 }
 
 @media (max-width: 640px){
-  .course-grid{ grid-template-columns:1fr; gap:14px }
-  .course-card{ padding:14px; border-radius:16px }
+  .student-shell{ padding:0 }
+  .student-hero-panel{ border-radius:18px }
+  .student-hero__highlights{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)) }
+  .course-grid{ grid-template-columns:1fr; gap:12px }
+  .course-card{ padding:12px; border-radius:14px }
   .section-header{ gap:12px }
   .section-header h2{ font-size:20px }
   .section-header p{ font-size:13px }

@@ -818,71 +818,93 @@ export default function StudentDashboard({ user, courses, loading, error, onRefr
     );
   }
 
+  const quickLinks = [
+    { href: '#tablero-cursos', label: 'Cursos', icon: '📚' },
+    { href: '#metricas', label: 'Promedios', icon: '📈' },
+    { href: '#recomendaciones', label: 'Recomendaciones', icon: '✨' },
+    { href: '#intentos', label: 'Intentos', icon: '🎯' },
+  ];
+
+  const heroHighlights = [
+    { label: 'Progreso general', value: `${Math.round(progress)}%` },
+    { label: 'Promedio', value: formatPercentage(average) },
+    { label: 'Cursos activos', value: courses.length },
+  ];
+
   return (
     <div className="dashboard dashboard--student">
       <DashboardHeader user={user} badge={gradeLabel} onLogout={onLogout} />
-      <div className="dashboard-layout dashboard-layout--student">
-        <aside className="dashboard-aside dashboard-aside--student">
-          <section className="dashboard-hero-card">
-            <p className="dashboard-hero__eyebrow">Bienvenido(a) · {gradeLabel}</p>
+      <div className="student-shell">
+        <section className="student-hero-panel" id="resumen">
+          <div className="student-hero__text">
+            <p className="student-hero__eyebrow">{gradeLabel}</p>
             <h1>Hola, {firstName}</h1>
             <p>
-              Revisa tu progreso general, completa nuevas actividades y mantente al día con las
-              recomendaciones personalizadas.
+              Continúa tu camino en el CNB con tarjetas más compactas y accesos rápidos. Revisa tu avance y
+              retoma el siguiente curso desde aquí.
             </p>
-          </section>
-
-          <nav className="dashboard-menu" aria-label="Navegación del tablero">
-            <h2>Menú rápido</h2>
-            <ul>
-              <li><a href="#tablero-cursos">Cursos</a></li>
-              <li><a href="#metricas">Promedios</a></li>
-              <li><a href="#recomendaciones">Recomendaciones</a></li>
-              <li><a href="#intentos">Intentos</a></li>
-            </ul>
-          </nav>
-
-          <section className="student-section student-section--notifications" id="notificaciones">
-            <div>
-              <h2>Notificaciones por correo electrónico</h2>
-              <p>Recibe alertas cuando haya nuevas actividades o recomendaciones.</p>
+            <div className="student-hero__highlights">
+              {heroHighlights.map((item) => (
+                <div key={item.label} className="hero-highlight">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
             </div>
-            <button
-              type="button"
-              className={`toggle ${notificationsEnabled ? 'toggle--on' : 'toggle--off'}`}
-              onClick={() => setNotificationsEnabled((value) => !value)}
-            >
-              <span className="toggle__indicator" />
-              {notificationsEnabled ? 'Activadas' : 'Desactivadas'}
-            </button>
-          </section>
-        </aside>
+          </div>
 
-        <main className="dashboard-main">
-          <StudentCourseGrid
-            sectionId="tablero-cursos"
-            courses={courses}
-            loading={loading}
-            error={error}
-            onRefresh={handleRefresh}
-            onViewContent={handleLoadContent}
-            loadingCourseId={loadingCourseId}
-          />
+          <div className="student-hero__actions">
+            <div className="hero-notifications">
+              <span>Notificaciones por correo</span>
+              <button
+                type="button"
+                className={`toggle ${notificationsEnabled ? 'toggle--on' : 'toggle--off'}`}
+                onClick={() => setNotificationsEnabled((value) => !value)}
+              >
+                <span className="toggle__indicator" />
+                {notificationsEnabled ? 'Activadas' : 'Desactivadas'}
+              </button>
+            </div>
+            <div className="hero-summary">
+              <p className="hero-summary__eyebrow">Último movimiento</p>
+              <p className="hero-summary__title">{courses[0]?.titulo || courses[0]?.area || 'Cursos listos'}</p>
+              <p className="hero-summary__hint">Elige un curso para ver contenidos, actividades y recomendaciones.</p>
+            </div>
+          </div>
+        </section>
 
-          <StudentMetrics sectionId="metricas" metrics={metrics} />
+        <section className="student-quick-links" aria-label="Enlaces rápidos">
+          {quickLinks.map((link) => (
+            <a key={link.href} className="quick-link" href={link.href}>
+              <span className="quick-link__icon" aria-hidden="true">{link.icon}</span>
+              <span className="quick-link__label">{link.label}</span>
+            </a>
+          ))}
+        </section>
 
-          <StudentRecommendations
-            sectionId="recomendaciones"
-            latest={latestRecommendation}
-            history={recommendationHistory}
-          />
+        <StudentCourseGrid
+          sectionId="tablero-cursos"
+          courses={courses}
+          loading={loading}
+          error={error}
+          onRefresh={handleRefresh}
+          onViewContent={handleLoadContent}
+          loadingCourseId={loadingCourseId}
+        />
 
-          <StudentAttempts
-            sectionId="intentos"
-            attemptsLeft={attemptsLeft}
-            totalAttempts={totalAttempts}
-          />
-        </main>
+        <StudentMetrics sectionId="metricas" metrics={metrics} />
+
+        <StudentRecommendations
+          sectionId="recomendaciones"
+          latest={latestRecommendation}
+          history={recommendationHistory}
+        />
+
+        <StudentAttempts
+          sectionId="intentos"
+          attemptsLeft={attemptsLeft}
+          totalAttempts={totalAttempts}
+        />
       </div>
     </div>
   );
